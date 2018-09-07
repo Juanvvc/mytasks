@@ -1,0 +1,6 @@
+*pyc
+server/.venv
+__pycache__
+*.swp
+server/data
+server/data-test
