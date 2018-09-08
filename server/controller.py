@@ -7,15 +7,17 @@ app = flask.Flask(__name__)
 
 BASE_URL_API = '/mytasks/api/v1.0'
 
-################## GENERAL FUNCTIONS
+# ------------------- GENERAL FUNCTIONS
+
 
 @app.errorhandler(404)
 @app.errorhandler(400)
 @app.errorhandler(500)
-def errorhandler(error):    
+def errorhandler(error):
     return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))
 
-################## USERS
+# ------------------- USERS
+
 
 @app.route(BASE_URL_API + '/', methods=['GET'])
 def users():
@@ -25,6 +27,7 @@ def users():
         info['uri'] = flask.url_for('single_user', user_id=user_id, _external=True)
         available_users.append(info)
     return flask.jsonify(available_users)
+
 
 @app.route(BASE_URL_API + '/<int:user_id>', methods=['GET'])
 def single_user(user_id):
@@ -42,7 +45,8 @@ def single_user(user_id):
     info['id'] = user_id
     return flask.jsonify(info)
 
-################## GROUPS
+# ------------------- GROUPS
+
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['GET'])
 def single_group(user_id, group_id):
@@ -62,6 +66,7 @@ def single_group(user_id, group_id):
     info['user']['uri'] = flask.url_for('single_user', user_id=user_id, _external=True)
     return flask.jsonify(info)
 
+
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['POST', 'PUT'])
 def update_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -75,6 +80,7 @@ def update_group(user_id, group_id):
         return single_group(user_id, group.id)
     else:
         flask.abort(500, 'Error while saving group')
+
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups', methods=['POST', 'PUT'])
 def new_group(user_id):
@@ -96,6 +102,7 @@ def new_group(user_id):
     else:
         flask.abort(500, 'Error while saving new group')
 
+
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['DELETE'])
 def delete_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -106,7 +113,8 @@ def delete_group(user_id, group_id):
     else:
         flask.abort(500, 'Error while deleting group')
 
-################## CHECKLISTS
+# ------------------- CHECKLISTS
+
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['GET'])
 def single_checklist(user_id, group_id, checklist_id):
@@ -122,6 +130,7 @@ def single_checklist(user_id, group_id, checklist_id):
     info['user']['uri'] = flask.url_for('single_user', user_id=user_id, _external=True)
     return flask.jsonify(info)
 
+
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['POST', 'PUT'])
 def update_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
@@ -135,6 +144,7 @@ def update_checklist(user_id, group_id, checklist_id):
         return single_checklist(user_id, group_id, checklist_id)
     else:
         flask.abort(500, 'Error while saving checklist')
+
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists', methods=['POST', 'PUT'])
 def new_checklist(user_id, group_id):

@@ -10,11 +10,12 @@ logger = logging.getLogger(__name__)
 DATA_DIR = 'data'
 METADATA_FILE = 'metadata.json'
 
+
 class User(object):
     def __init__(self, id):
         assert type(id) == int
         self.id = id
-        if not id in available_users() or not os.path.isfile(self.filename()):
+        if id not in available_users() or not os.path.isfile(self.filename()):
             raise Exception('User not found: {}'.format(id))
         with open(self.filename()) as json_data:
             try:
@@ -22,36 +23,36 @@ class User(object):
             except json.decoder.JSONDecodeError:
                 logger.warning('Cannot decode %s. Using empty user.', self.filename())
                 self.info = dict()
-        
+
     def summary(self):
         return dict(
             id=self.id,
             name=self.info.get('name', '')
         )
-    
+
     def group(self, group_id):
         return Group(self, group_id)
-    
+
     def checklist(self, group_id, checklist_id):
         group = self.group(group_id)
         if group is None:
             return None
         return group.checklist(checklist_id)
-    
+
     def save(self):
         logger.debug('Saving user %s', self.id)
         with open(self.filename(), 'w') as json_file:
             json.dump(self.info, json_file)
         return True
-    
+
     def delete(self):
         logger.debug('Deleting user %s', self.id)
         shutil.rmtree(self.dirname())
         return True
-    
+
     def filename(self):
         return os.path.join(self.dirname(), METADATA_FILE)
-    
+
     def dirname(self):
         return os.path.join(DATA_DIR, str(self.id))
 
@@ -65,15 +66,16 @@ class User(object):
         os.mknod(os.path.join(group_directory, METADATA_FILE))
         return Group(self, max_id)
 
+
 class Group(object):
     def __init__(self, user, id):
         assert type(user) == User
         assert type(id) == int
         self.user = user
         self.id = id
-        
+
         existing_groups = available_groups(user.id)
-        
+
         if self.id not in existing_groups:
             raise Exception('Group does not exist: {}/{}'.format(self.user.id, id))
         else:
@@ -84,48 +86,48 @@ class Group(object):
                 except json.decoder.JSONDecodeError:
                     logger.warning('Cannot decode %s. Using empty group.', self.filename())
                     self.info = dict()
-    
+
     def summary(self):
         return dict(
             id=self.id,
             name=self.info.get('name', ''),
             private=self.info.get('private', True)
         )
-    
+
     def save(self):
         logger.debug('Saving group %s/%s', self.user.id, self.id)
         with open(self.filename(), 'w') as json_file:
             json.dump(self.info, json_file)
         return True
-    
+
     def delete(self):
         logger.debug('Deleting group %s/%s', self.user.id, self.id)
         shutil.rmtree(self.dirname())
         return True
-    
+
     def filename(self):
         return os.path.join(self.dirname(), METADATA_FILE)
-    
+
     def dirname(self):
         return os.path.join(self.user.dirname(), str(self.id))
-    
+
     def create_checklist(self):
         existing_checklists = available_checklists(self.user.id, self.id)
         max_id = 0
         if existing_checklists:
             max_id = max(existing_checklists) + 1
         os.mknod(os.path.join(self.dirname(), '{}.json'.format(max_id)))
-        return Checklist(self, max_id)        
+        return Checklist(self, max_id)
 
 
 class Checklist(object):
     def __init__(self, group, id):
         assert type(group) == Group
         assert type(id) == int
-        
+
         self.group = group
         self.id = id
-        
+
         if not os.path.isfile(self.filename()):
             raise Exception('Checklist does not exist: {}/{}/{}'.format(self.group.user.id, self.group.id, id))
         else:
@@ -137,27 +139,27 @@ class Checklist(object):
                     logger.warning('Cannot decode file %s. Using empty information', self.filename())
                     self.info = dict()
                 self.id = id
-    
+
     def summary(self):
         return dict(
             id=self.id,
             name=self.info.get('name', '')
         )
-    
+
     def save(self):
         logger.debug('Saving checklist %s/%s/%s', self.group.user.id, self.group.id, self.id)
         with open(self.filename(), 'w') as json_file:
             json.dump(self.info, json_file)
         return True
-    
+
     def delete(self):
         logger.debug('Deleting checklist %s/%s/%s', self.group.user.id, self.group.id, self.id)
         os.remove(self.filename())
         return True
-    
+
     def filename(self):
         return os.path.join(self.group.dirname(), '{}.json'.format(self.id))
-        
+
 
 def available_users():
     users = list()
