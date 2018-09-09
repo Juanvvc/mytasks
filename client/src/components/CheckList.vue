@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="checklist !== null">
-      <h1>{{checklist.name}}</h1>
+      <h1>{{ group.name}} : {{checklist.name}}</h1>
 
       <p v-if="checklist.description !== undefined">
         {{ checklist.description }}
@@ -20,7 +20,7 @@
         <span>Clear done items from the checklist</span>
       </v-tooltip>
       <v-tooltip top>
-        <v-btn slot="activator" color="error"><v-icon>delete</v-icon> Delete</v-btn>
+        <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
         <span>Delete the checklist</span>
       </v-tooltip>
 
@@ -67,6 +67,10 @@
 export default {
   props: {
     checklist: {
+      type: Object,
+      mandatory: true
+    },
+    group: {
       type: Object,
       mandatory: true
     }

@@ -9,36 +9,64 @@
     >
       <v-list dense>
         <v-list-group
-          v-for="section in sections"
-          v-model="section.active"
-          :key="section.name"
-          prepend-icon="view_agenda"
-          no-action>
+          v-for="group in groups"
+          v-model="group.active"
+          :key="group.id"
+          prepend-icon="view_agenda">
+          <!-- group name -->
           <v-list-tile slot="activator">
             <v-list-tile-content>
-              <v-list-tile-title>{{section.name}}</v-list-tile-title>
+              <v-list-tile-title>{{group.name}}</v-list-tile-title>
             </v-list-tile-content>
+            <!-- add checklists or delete the group -->
+            <v-list-tile-action>
+              <v-flex xs12>
+                <v-tooltip bottom>
+                  <v-btn
+                    flat icon color="primary"
+                    slot="activator"
+                    @click.stop="newChecklist(group.id)">
+                    <v-icon>add</v-icon>
+                  </v-btn>
+                  <span>Add a new checklist to the group</span>
+                </v-tooltip>
+                <!-- you can only delete the group if not empty -->
+                <v-tooltip bottom>
+                  <v-btn
+                    flat icon color="error"
+                    slot="activator"
+                    :disabled="group.checklists !== undefined && group.checklists.length != 0"
+                    @click.stop="deleteGroup(group.id)">
+                    <v-icon>delete</v-icon>
+                  </v-btn>
+                  <span>If empty, delete the group</span>
+                </v-tooltip>
+              </v-flex>
+            </v-list-tile-action>
           </v-list-tile>
+          <!-- Lis of checklist in group -->
           <v-list-tile
-            v-for="checklist in section.checklists"
-            :key="checklist.name"
+            v-for="checklist in group.checklists"
+            :key="checklist.id"
           >
             <v-list-tile-content>
               <v-list-tile-title
-                @click="loadChecklist(section.id, checklist.id)"
+                @click="loadChecklist(group.id, checklist.id)"
                 class="pointable">
                 {{checklist.name}}
               </v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
-
         </v-list-group>
 
+        <!-- Add a new group-->
         <v-text-field
           label="Solo"
           placeholder="New group"
-          v-model="newSectionName"
-          @keyup.enter="createSection(newSectionName)"
+          v-model="newGroupName"
+          @keyup.enter="newGroup(newGroupName)"
+          @blur="newGroupName = ''"
+          @keyup.escape="newGroupName = ''"
           solo
         ></v-text-field>
 
@@ -56,9 +84,11 @@
     <v-content>
       <check-list
         :checklist="activeChecklist"
+        :group="activeGroup"
         @newItem="newItem"
         @checkItem="checkItem"
         @clearChecklist="clearChecklist"
+        @deleteChecklist="deleteChecklist"
         />
     </v-content>
   </div>
@@ -75,9 +105,10 @@ export default {
   },
   data: () => ({
     showDrawer: true,
-    newSectionName: '',
+    newGroupName: '',
     activeChecklist: null,
-    sections: [
+    activeGroup: null,
+    groups: [
       {
         name: 'One',
         active: true,
@@ -97,43 +128,114 @@ export default {
       {name: 'Two', active: false, id: 1}
     ]
   }),
+
   methods: {
-    loadChecklist (sectionId, checklistId) {
-      for(var i=0; i<this.sections.length; i++) {
-        if(this.sections[i].id === sectionId) {
-          let currentSection = this.sections[i]
-          for(var j=0; j<currentSection.checklists.length; j++) {
-            if(currentSection.checklists[j].id === checklistId) {
-              this.activeChecklist = currentSection.checklists[j]
-              return
-            }
-          }
+    getGroupById(groupId) {
+      if(this.groups === null) {
+        return null
+      }
+      for(let i=0; i<this.groups.length; i++) {
+        if(this.groups[i].id === groupId) {
+          return this.groups[i]
         }
       }
-      this.$emit('showError', 'No checklist ' + sectionId + '/' + checklistId)
+      return null
+    },
+
+    getChecklistById(groupId, checklistId) {
+      var group = this.getGroupById(groupId)
+      if(group === null || group.checklists === undefined) {
+        return null
+      }
+
+      for(let i=0; i<group.checklists.length; i++) {
+        if(group.checklists[i].id === checklistId) {
+          return group.checklists[i]
+        }
+      }
+      return null
+    },
+
+    loadChecklist (groupId, checklistId) {
+      this.activeGroup = this.getGroupById(groupId)
+      this.activeChecklist = this.getChecklistById(groupId, checklistId)
+    },
+
+    newGroup(name) {
+      this.groups.push({
+        name: name,
+        description: null,
+        checklists: []
+      })
+    },
+
+    deleteGroup(groupId) {
+      if(this.activeGroup !== null && this.activeGroup.id === groupId) {
+        this.activeGroup = null
+        this.activeChecklist = null
+      }
+      for(var i=0; i<this.groups.length; i++) {
+        if(this.groups[i].id === groupId) {
+          if(this.groups[i].checklists === undefined || this.groups.checklists.length === 0) {
+            this.groups.splice(i, 1)
+          } else {
+            this.$emit('showError', 'Cannot delete group: not empty')
+          }
+          return
+        }
+      }
+    },
+
+    newChecklist(groupId) {
+      var group = this.getGroupById(groupId)
+      if(group.checklists === undefined || group.checklists === null) {
+        group.checklists = []
+      }
+      group.checklists.push({
+        name: 'New checklist',
+        description: '',
+        items: []
+      })
     },
 
     newItem(name) {
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        this.$emit('showError', 'No active checklist to add an item')
+      }
       this.activeChecklist.items.push({'name': name, checked: false})
     },
 
     checkItem(index) {
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        this.$emit('showError', 'No active checklist to check item')
+      }
       this.activeChecklist.items[index].checked = !this.activeChecklist.items[index].checked
     },
 
     clearChecklist() {
-      var newChecklist = {}
-      newChecklist.id = this.activeChecklist.id
-      newChecklist.name = this.activeChecklist.name
-      newChecklist.description = this.activeChecklist.description
-      newChecklist.items = []
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        this.$emit('showError', 'No active checklist to clear')
+      }
+      var newItems = []
       for(var i=0; i<this.activeChecklist.items.length; i++) {
         if(!this.activeChecklist.items[i].checked) {
-          newChecklist.items.push(this.activeChecklist.items[i])
+          newItems.push(this.activeChecklist.items[i])
         }
       }
-      this.activeChecklist = newChecklist
-      // TODO: save newChecklist in checklists
+      this.activeChecklist.items = newItems
+    },
+
+    deleteChecklist() {
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        this.$emit('showError', 'No active checklist to delete')
+      }
+      for(var i=0; i<this.activeGroup.checklists.length; i++) {
+        if(this.activeGroup.checklists[i].id === this.activeChecklist.id) {
+          this.activeGroup.checklists.splice(i, 1)
+          this.activeChecklist = null
+          return
+        }
+      }
     }
   }
 }
