@@ -94,12 +94,15 @@
         @changeMetadata="changeMetadata"
         />
     </v-content>
+
+    <confirm-dialog ref="confirmDialog" />
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
 import CheckList from '@/components/CheckList.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const axios = require('axios')
 
@@ -128,7 +131,8 @@ var TEST_DATA = [
 export default {
   name: 'home',
   components: {
-    CheckList
+    CheckList,
+    ConfirmDialog
   },
   data: () => ({
     showDrawer: true,
@@ -226,12 +230,18 @@ export default {
         this.activeGroup = null
         this.activeChecklist = null
       }
-      axios.delete(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.loadUser(this.activeUser.id)
+      let group = this.getGroupById(groupId)
+      this.$refs.confirmDialog.confirm({message: 'Are you sure you want to delete group "' + group.name + '"?'}).then( confirm => {
+        if(!confirm) {
+          return
         }
+        axios.delete(group.uri).then(response => {
+          if(response.data.error_message !== undefined) {
+            this.$emit('showError', response.data.error_message)
+          } else {
+            this.loadUser(this.activeUser.id)
+          }
+        })
       })
     },
 
@@ -301,16 +311,21 @@ export default {
       if(this.activeGroup === null || this.activeChecklist === null) {
         this.$emit('showError', 'No active checklist to clear')
       }
-      var newItems = []
-      for(var i=0; i<this.activeChecklist.items.length; i++) {
-        if(!this.activeChecklist.items[i].checked) {
-          newItems.push(this.activeChecklist.items[i])
+      this.$refs.confirmDialog.confirm({message: 'Are you sure you want to clear list "' + this.activeChecklist.name + '"?'}).then( confirm => {
+        if(!confirm) {
+          return
         }
-      }
-      var newChecklistData = {
-        items: newItems
-      }
-      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+        var newItems = []
+        for(var i=0; i<this.activeChecklist.items.length; i++) {
+          if(!this.activeChecklist.items[i].checked) {
+            newItems.push(this.activeChecklist.items[i])
+          }
+        }
+        var newChecklistData = {
+          items: newItems
+        }
+        this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+      })
     },
 
     changeMetadata(metadata) {
