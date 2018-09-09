@@ -43,17 +43,28 @@ class TestModel(unittest.TestCase):
 
     def test_user_create(self):
         " test a user can be created "
-        new_user = model.create_user()
+        new_user = model.create_user('NEWUSER')
         self.assertEqual(type(new_user), model.User)
         self.assertEqual(new_user.id, 3)
+        # check the new user cannot login
+        self.assertFalse(model.PASSWORD_FIELDNAME in new_user.info)
 
-        # remove all users and create a new one with id 0
+    def test_user_create2(self):
+        " Remove all users and create a new one with id 0 "
         for u in model.available_users():
             user = model.search_user(u)
             user.delete()
-        new_user = model.create_user()
+        new_user = model.create_user('NEWUSER')
         self.assertEqual(type(new_user), model.User)
         self.assertEqual(new_user.id, 0)
+
+    def test_user_create3(self):
+        " Create a new user with a password. Check a good and a bad password "
+        new_user = model.create_user('NEWUSER', 'PASSWORD')
+        self.assertEqual(type(new_user), model.User)
+        self.assertTrue(model.PASSWORD_FIELDNAME in new_user.info)
+        self.assertTrue(new_user.verify_password('PASSWORD'))
+        self.assertFalse(new_user.verify_password('WRONG'))
 
     def test_remove_user(self):
         " Remove user 2 and test only user 0 exist. "

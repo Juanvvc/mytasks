@@ -4,11 +4,13 @@ import os
 import json
 import logging
 import shutil
+from passlib.apps import custom_app_context as pwd_context
 
 logger = logging.getLogger(__name__)
 
 DATA_DIR = 'data'
 METADATA_FILE = 'metadata.json'
+PASSWORD_FIELDNAME = 'password_hash'
 
 
 class User(object):
@@ -25,19 +27,40 @@ class User(object):
                 self.info = dict()
 
     def summary(self):
+        """ Returns the summary of the userself.
+
+        This method shouldn't return any dangerous information: passwords, hashes of passwords...
+        Only data intented that can be publicly accessed is returned. """
         return dict(
             id=self.id,
             name=self.info.get('name', '')
         )
 
-    def group(self, group_id):
-        return Group(self, group_id)
+    def hash_password(self, password):
+        """ Save a password hash in the user.
 
-    def checklist(self, group_id, checklist_id):
-        group = self.group(group_id)
-        if group is None:
-            return None
-        return group.checklist(checklist_id)
+        Args:
+            password (str): the password of the user. Only it hash is saved.
+        """
+        self.info[PASSWORD_FIELDNAME] = pwd_context.hash(password)
+
+    def verify_password(self, password):
+        """ Returns True if the password is verifiedself.
+
+        If the user does not have a password hash, it is never verified. """
+        if PASSWORD_FIELDNAME in self.info:
+            return pwd_context.verify(password, self.info[PASSWORD_FIELDNAME])
+        else:
+            return False
+
+#    def group(self, group_id):
+#        return Group(self, group_id)
+
+#    def checklist(self, group_id, checklist_id):
+#        group = self.group(group_id)
+#        if group is None:
+#            return None
+#        return group.checklist(checklist_id)
 
     def save(self):
         logger.debug('Saving user %s', self.id)
@@ -213,7 +236,16 @@ def available_checklists(user_id, group_id):
     return checklists
 
 
-def create_user():
+def create_user(name, password=None):
+    """ Creates a new user.
+
+    Args:
+        name (str): Name of the user
+        password (str): Password of the user. If None, no password is created and the user cannot logon
+
+    Returns:
+        User: The new user
+    """
     existing_users = available_users()
     max_id = 0
     if existing_users:
@@ -222,10 +254,20 @@ def create_user():
     # In case the directory exists but it is not yet a user, exist_ok=True
     os.makedirs(user_directory, exist_ok=True)
     os.mknod(os.path.join(user_directory, METADATA_FILE))
-    return User(max_id)
+    user = User(max_id)
+    if password is not None:
+        user.hash_password(password)
+    if user.save():
+        return user
+    return None
 
 
 def search_user(user_id):
+    """ Gets a user, if exists.
+
+    Args:
+        user_id (int): The identifier of the user
+    """
     if user_id in available_users():
         return User(user_id)
     return None

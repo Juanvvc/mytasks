@@ -2,8 +2,12 @@
 
 import flask
 import model
+from flask_httpauth import HTTPBasicAuth
+import logging
 
 app = flask.Flask(__name__)
+auth = HTTPBasicAuth()
+logger = logging.getLogger(__name__)
 
 BASE_URL_API = '/mytasks/api/v1.0'
 
@@ -16,10 +20,24 @@ BASE_URL_API = '/mytasks/api/v1.0'
 def errorhandler(error):
     return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))
 
+
+@auth.verify_password
+def verify_password(userid, password):
+    logger.warning('Verifying password for user %s', userid)
+    if not userid or not userid.isdigit():
+        logger.warning('Username not valid: %s', userid)
+        return False
+    user = model.search_user(int(userid))
+    if not user or not user.verify_password(password):
+        logger.warning('Password not valid for userid: %s', userid)
+        return False
+    return True
+
 # ------------------- USERS
 
 
 @app.route(BASE_URL_API + '/', methods=['GET'])
+@auth.login_required
 def users():
     available_users = list()
     for user_id in model.available_users():
@@ -30,11 +48,12 @@ def users():
 
 
 @app.route(BASE_URL_API + '/<int:user_id>', methods=['GET'])
+@auth.login_required
 def single_user(user_id):
     user = model.search_user(user_id)
     if user is None:
         flask.abort(404)
-    info = user.info
+    info = user.summary()
     groups_info = list()
     for g in model.available_groups(user_id):
         group_info = model.search_group(user_id, g).summary()
@@ -49,6 +68,7 @@ def single_user(user_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['GET'])
+@auth.login_required
 def single_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
     if group is None:
@@ -68,6 +88,7 @@ def single_group(user_id, group_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['POST', 'PUT'])
+@auth.login_required
 def update_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
     if group is None:
@@ -83,6 +104,7 @@ def update_group(user_id, group_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups', methods=['POST', 'PUT'])
+@auth.login_required
 def new_group(user_id):
     user = model.search_user(user_id)
     if user is None:
@@ -104,6 +126,7 @@ def new_group(user_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['DELETE'])
+@auth.login_required
 def delete_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
     if group is None:
@@ -117,6 +140,7 @@ def delete_group(user_id, group_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['GET'])
+@auth.login_required
 def single_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
     if checklist is None:
@@ -132,6 +156,7 @@ def single_checklist(user_id, group_id, checklist_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['POST', 'PUT'])
+@auth.login_required
 def update_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
     if checklist is None:
@@ -147,6 +172,7 @@ def update_checklist(user_id, group_id, checklist_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists', methods=['POST', 'PUT'])
+@auth.login_required
 def new_checklist(user_id, group_id):
     group = model.search_group(user_id, group_id)
     if group is None:
@@ -166,6 +192,7 @@ def new_checklist(user_id, group_id):
 
 
 @app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['DELETE'])
+@auth.login_required
 def delete_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
     if checklist is None:
