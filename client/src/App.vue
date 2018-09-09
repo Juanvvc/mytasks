@@ -1,17 +1,18 @@
 <template>
   <div id="app">
     <v-app id="inspire">
+      <v-alert
+        v-model="showErrorMessage"
+        dismissible
+        type="error"
+        transition="$primary-transition"
+        >
+          {{ errorMessage }}
+      </v-alert>
       <router-view @showError="showError"/>
       <v-footer app fixed>
         <span>&copy; 2018, Juanvi Vera</span>
       </v-footer>
-      <v-alert
-        v-model="showErrorMessage"
-        dismissible
-        type="success"
-        >
-          {{ errorMessage }}
-      </v-alert>
     </v-app>
   </div>
 </template>

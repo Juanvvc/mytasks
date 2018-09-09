@@ -12,14 +12,15 @@
           v-for="group in groups"
           v-model="group.active"
           :key="group.id"
+          @click="loadGroup(group.id)"
           prepend-icon="view_agenda">
           <!-- group name -->
           <v-list-tile slot="activator">
             <v-list-tile-content>
               <v-list-tile-title>{{group.name}}</v-list-tile-title>
             </v-list-tile-content>
-            <!-- add checklists or delete the group -->
-            <v-list-tile-action>
+            <!-- add checklists or delete the group. if it is the active group -->
+            <v-list-tile-action v-if="isGroupActive(group.id)">
               <v-flex xs12>
                 <v-tooltip bottom>
                   <v-btn
@@ -44,8 +45,9 @@
               </v-flex>
             </v-list-tile-action>
           </v-list-tile>
-          <!-- Lis of checklist in group -->
+          <!-- List of checklist in group -->
           <v-list-tile
+            v-if="isGroupActive(group.id)"
             v-for="checklist in group.checklists"
             :key="checklist.id"
           >
@@ -89,6 +91,7 @@
         @checkItem="checkItem"
         @clearChecklist="clearChecklist"
         @deleteChecklist="deleteChecklist"
+        @changeMetadata="changeMetadata"
         />
     </v-content>
   </div>
@@ -97,6 +100,30 @@
 <script>
 // @ is an alias to /src
 import CheckList from '@/components/CheckList.vue'
+
+const axios = require('axios')
+
+var MYTASKS_SERVER = 'http://localhost:5000/mytasks/api/v1.0'
+
+var TEST_DATA = [
+  {
+    name: 'One',
+    active: true,
+    id: 0,
+    checklists: [
+      {
+        name: "1",
+        id: 1,
+        items: [
+          {'name': 'item1', checked: true},
+          {'name': 'item2', checked: false},
+        ]
+      },
+      {name: "222", id: 2}
+    ]
+  },
+  {name: 'Two', active: false, id: 1}
+]
 
 export default {
   name: 'home',
@@ -108,28 +135,19 @@ export default {
     newGroupName: '',
     activeChecklist: null,
     activeGroup: null,
-    groups: [
-      {
-        name: 'One',
-        active: true,
-        id: 0,
-        checklists: [
-          {
-            name: "1",
-            id: 1,
-            items: [
-              {'name': 'item1', checked: true},
-              {'name': 'item2', checked: false},
-            ]
-          },
-          {name: "222", id: 2}
-        ]
-      },
-      {name: 'Two', active: false, id: 1}
-    ]
+    activeUser: null,
+    groups: []
   }),
 
+  mounted () {
+    this.loadUser(0)
+  },
+
   methods: {
+    isGroupActive(groupId) {
+      return this.activeGroup !== null && this.activeGroup.id === groupId
+    },
+
     getGroupById(groupId) {
       if(this.groups === null) {
         return null
@@ -142,7 +160,7 @@ export default {
       return null
     },
 
-    getChecklistById(groupId, checklistId) {
+    /*getChecklistById(groupId, checklistId) {
       var group = this.getGroupById(groupId)
       if(group === null || group.checklists === undefined) {
         return null
@@ -154,19 +172,53 @@ export default {
         }
       }
       return null
+    },*/
+
+    loadUser(userId) {
+      axios.get(MYTASKS_SERVER + '/' + userId).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.activeUser = response.data
+          this.groups = response.data.groups
+        }
+      }).catch(() => {
+        this.$emit('showError', 'Cannot connect to the server')
+      })
     },
 
-    loadChecklist (groupId, checklistId) {
-      this.activeGroup = this.getGroupById(groupId)
-      this.activeChecklist = this.getChecklistById(groupId, checklistId)
+    loadGroup(groupId) {
+      axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId).then( response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          for(var i=0; i<this.groups.length; i++) {
+            if(this.groups[i].id === groupId) {
+              this.$set(this.groups, i, response.data)
+              this.groups[i].active = true
+              this.activeGroup = this.groups[i]
+              this.activeChecklist = null
+            } else {
+              this.groups[i].active = false
+            }
+          }
+        }
+      })
     },
 
     newGroup(name) {
-      this.groups.push({
+      axios.post(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups', {
         name: name,
-        description: null,
+        description: '',
         checklists: []
+      }).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.groups.push(response.data)
+        }
       })
+      this.newGroupName = ''
     },
 
     deleteGroup(groupId) {
@@ -174,27 +226,52 @@ export default {
         this.activeGroup = null
         this.activeChecklist = null
       }
-      for(var i=0; i<this.groups.length; i++) {
-        if(this.groups[i].id === groupId) {
-          if(this.groups[i].checklists === undefined || this.groups.checklists.length === 0) {
-            this.groups.splice(i, 1)
-          } else {
-            this.$emit('showError', 'Cannot delete group: not empty')
-          }
-          return
+      axios.delete(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.loadUser(this.activeUser.id)
         }
-      }
+      })
+    },
+
+    loadChecklist (groupId, checklistId) {
+      axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId + '/checklists/' + checklistId).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.activeGroup = this.getGroupById(groupId)
+          this.activeChecklist = response.data
+        }
+      })
     },
 
     newChecklist(groupId) {
-      var group = this.getGroupById(groupId)
-      if(group.checklists === undefined || group.checklists === null) {
-        group.checklists = []
-      }
-      group.checklists.push({
+      axios.post(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/'+ groupId + '/checklists', {
         name: 'New checklist',
         description: '',
         items: []
+      }).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          var group = this.getGroupById(groupId)
+          if(group.checklists === undefined) {
+            group.checklists = []
+          }
+          group.checklists.push(response.data)
+        }
+      })
+      this.newGroupName = ''
+    },
+
+    updateChecklist(userId, groupId, checklistId, newData) {
+      axios.post(MYTASKS_SERVER + '/' +userId + '/groups/'+ groupId + '/checklists/' + checklistId, newData).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.activeChecklist = response.data
+        }
       })
     },
 
@@ -202,14 +279,22 @@ export default {
       if(this.activeGroup === null || this.activeChecklist === null) {
         this.$emit('showError', 'No active checklist to add an item')
       }
-      this.activeChecklist.items.push({'name': name, checked: false})
+      var newChecklistData = {
+        items: (this.activeChecklist.items===undefined?[]:this.activeChecklist.items),
+      }
+      newChecklistData.items.push({name: name, checked: false})
+      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
     },
 
     checkItem(index) {
       if(this.activeGroup === null || this.activeChecklist === null) {
         this.$emit('showError', 'No active checklist to check item')
       }
-      this.activeChecklist.items[index].checked = !this.activeChecklist.items[index].checked
+      var newChecklistData = {
+        items: this.activeChecklist.items
+      }
+      newChecklistData.items[index].checked = !newChecklistData.items[index].checked
+      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
     },
 
     clearChecklist() {
@@ -222,20 +307,28 @@ export default {
           newItems.push(this.activeChecklist.items[i])
         }
       }
-      this.activeChecklist.items = newItems
+      var newChecklistData = {
+        items: newItems
+      }
+      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+    },
+
+    changeMetadata(metadata) {
+      console.log(metadata)
+      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, metadata)
     },
 
     deleteChecklist() {
       if(this.activeGroup === null || this.activeChecklist === null) {
         this.$emit('showError', 'No active checklist to delete')
       }
-      for(var i=0; i<this.activeGroup.checklists.length; i++) {
-        if(this.activeGroup.checklists[i].id === this.activeChecklist.id) {
-          this.activeGroup.checklists.splice(i, 1)
-          this.activeChecklist = null
-          return
+      axios.delete(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + this.activeGroup.id + '/checklists/' + this.activeChecklist.id).then(response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          this.loadGroup(this.activeGroup.id)
         }
-      }
+      })
     }
   }
 }

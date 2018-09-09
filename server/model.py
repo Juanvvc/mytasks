@@ -42,7 +42,7 @@ class User(object):
     def save(self):
         logger.debug('Saving user %s', self.id)
         with open(self.filename(), 'w') as json_file:
-            json.dump(self.info, json_file)
+            json.dump(self.info, json_file, indent=4)
         return True
 
     def delete(self):
@@ -97,11 +97,14 @@ class Group(object):
     def save(self):
         logger.debug('Saving group %s/%s', self.user.id, self.id)
         with open(self.filename(), 'w') as json_file:
-            json.dump(self.info, json_file)
+            json.dump(self.info, json_file, indent=4)
         return True
 
     def delete(self):
         logger.debug('Deleting group %s/%s', self.user.id, self.id)
+        # can only delete empty groups
+        if available_checklists(self.user.id, self.id):
+            return False
         shutil.rmtree(self.dirname())
         return True
 
@@ -149,7 +152,7 @@ class Checklist(object):
     def save(self):
         logger.debug('Saving checklist %s/%s/%s', self.group.user.id, self.group.id, self.id)
         with open(self.filename(), 'w') as json_file:
-            json.dump(self.info, json_file)
+            json.dump(self.info, json_file, indent=4)
         return True
 
     def delete(self):

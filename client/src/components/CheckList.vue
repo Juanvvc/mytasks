@@ -1,29 +1,18 @@
 <template>
   <div>
     <div v-if="checklist !== null">
-      <h1>{{ group.name}} : {{checklist.name}}</h1>
+      <h1>{{group.name}} : {{checklist.name}}</h1>
+
+      <v-text-field
+        label="Name, only saved after pressing ENTER"
+        placeholder="Name"
+        v-model="checklist.name"
+        @keyup.enter="$emit('changeMetadata', {name: checklist.name})">
+      </v-text-field>
 
       <p v-if="checklist.description !== undefined">
         {{ checklist.description }}
       </p>
-
-      <v-tooltip top>
-        <v-btn slot="activator"><v-icon>assignment_return</v-icon> Move to</v-btn>
-        <span>Move the checklist to a different group</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator"><v-icon>file_copy</v-icon> Copy to</v-btn>
-        <span>Copy the checklist to a new group</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
-        <span>Clear done items from the checklist</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
-        <span>Delete the checklist</span>
-      </v-tooltip>
-
 
       <v-list>
         <v-list-tile
@@ -55,6 +44,23 @@
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
+
+      <v-tooltip top>
+        <v-btn slot="activator"><v-icon>assignment_return</v-icon> Move to</v-btn>
+        <span>Move the checklist to a different group</span>
+      </v-tooltip>
+      <v-tooltip top>
+        <v-btn slot="activator"><v-icon>file_copy</v-icon> Copy to</v-btn>
+        <span>Copy the checklist to a new group</span>
+      </v-tooltip>
+      <v-tooltip top>
+        <v-btn slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
+        <span>Clear done items from the checklist</span>
+      </v-tooltip>
+      <v-tooltip top>
+        <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
+        <span>Delete the checklist</span>
+      </v-tooltip>
 
     </div>
     <div v-else>
