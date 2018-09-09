@@ -87,11 +87,14 @@
       <check-list
         :checklist="activeChecklist"
         :group="activeGroup"
+        :available-groups="groups"
         @newItem="newItem"
         @checkItem="checkItem"
         @clearChecklist="clearChecklist"
         @deleteChecklist="deleteChecklist"
         @changeMetadata="changeMetadata"
+        @changeChecklistGroup="changeChecklistGroup"
+        @duplicateChecklist="duplicateChecklist"
         />
     </v-content>
 
@@ -164,20 +167,6 @@ export default {
       return null
     },
 
-    /*getChecklistById(groupId, checklistId) {
-      var group = this.getGroupById(groupId)
-      if(group === null || group.checklists === undefined) {
-        return null
-      }
-
-      for(let i=0; i<group.checklists.length; i++) {
-        if(group.checklists[i].id === checklistId) {
-          return group.checklists[i]
-        }
-      }
-      return null
-    },*/
-
     loadUser(userId) {
       axios.get(MYTASKS_SERVER + '/' + userId).then(response => {
         if(response.data.error_message !== undefined) {
@@ -191,7 +180,10 @@ export default {
       })
     },
 
-    loadGroup(groupId) {
+    loadGroup(groupId, checklistId) {
+      /* get data about a group from the server, and set it as active.
+
+      If a checklistIf is passed, load also the chccklist */
       axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId).then( response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
@@ -201,7 +193,11 @@ export default {
               this.$set(this.groups, i, response.data)
               this.groups[i].active = true
               this.activeGroup = this.groups[i]
-              this.activeChecklist = null
+              if(checklistId === undefined) {
+                this.activeChecklist = null
+              } else {
+                this.loadChecklist(groupId, checklistId)
+              }
             } else {
               this.groups[i].active = false
             }
@@ -246,6 +242,7 @@ export default {
     },
 
     loadChecklist (groupId, checklistId) {
+      /* Set a group and a checklist as active. */
       axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId + '/checklists/' + checklistId).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
@@ -357,6 +354,60 @@ export default {
             this.loadGroup(this.activeGroup.id)
           }
         })
+      })
+    },
+
+    changeChecklistGroup(fromGroupId, toGroupId) {
+      /* Change activeChecklist fromGroupId toGroupId. Activate the new group and checklist */
+      if(fromGroupId === toGroupId || this.activeChecklist === null) {
+        return
+      }
+      var toGroup = this.getGroupById(toGroupId)
+      if(toGroup === null) {
+        this.$emit('showError', 'Cannot find group ' + toGroupId)
+        return
+      }
+      var newData = {
+        name: this.activeChecklist.name,
+        description: this.activeChecklist.description,
+        items: this.activeChecklist.items
+      }
+      // create a new checklist in toGroup with this data
+      axios.post(toGroup.uri + '/checklists', newData).then( response => {
+        if(response.data.errorMessage !== undefined) {
+          this.$emit('showError', response.data.errorMessage)
+        } else {
+          // remove the old checklist
+          axios.delete(this.activeChecklist.uri).then(response => {
+            if(response.data.status !== 200) {
+              this.$emit('Cannot delete old checklist: ' + response.data.showError)
+            }
+          })
+          // load the group and checklist
+          this.loadGroup(toGroupId, response.data.id)
+        }
+      })
+    },
+
+    duplicateChecklist() {
+      /* Duplicates the current checklist in the current group.
+
+      The new checklist is actived */
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        return
+      }
+      var newData = {
+        name: this.activeChecklist.name,
+        description: this.activeChecklist.description,
+        items: this.activeChecklist.items
+      }
+      axios.post(this.activeGroup.uri + '/checklists', newData).then( response => {
+        if(response.data.errorMessage !== undefined) {
+          this.$emit('showError', response.data.errorMessage)
+        } else {
+          // load the group and the new checklist
+          this.loadGroup(this.activeGroup.id, response.data.id)
+        }
       })
     }
   }

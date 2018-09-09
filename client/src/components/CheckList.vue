@@ -1,72 +1,82 @@
 <template>
-  <div>
-    <div v-if="checklist !== null">
-      <h1>{{group.name}} : {{checklist.name}}</h1>
+  <v-layout row wrap>
+    <v-flex xs12 sm10 offset-sm1>
+      <v-card v-if="checklist !== null">
+        <v-toolbar color="secondary" dark>
+            <v-flex xs12 sm6>
+              <v-text-field
+                label="Name, only saved after pressing ENTER"
+                placeholder="Name"
+                v-model="checklist.name"
+                @keyup.enter="$emit('changeMetadata', {name: checklist.name})">
+              </v-text-field>
+            </v-flex>
+          <v-spacer />
+          <v-flex xs12 sm4>
+            <v-select
+              label="In group"
+              placeholder="GROUP"
+              v-model="checklist.group.id"
+              :items="availableGroups"
+              item-text="name"
+              item-value="id"
+              @change="$emit('changeChecklistGroup', group.id, checklist.group.id)"
+              >
+            </v-select>
+          </v-flex>
+        </v-toolbar>
 
-      <v-text-field
-        label="Name, only saved after pressing ENTER"
-        placeholder="Name"
-        v-model="checklist.name"
-        @keyup.enter="$emit('changeMetadata', {name: checklist.name})">
-      </v-text-field>
+        <v-list>
+          <v-list-tile
+            v-for="(item, index) in checklist.items"
+            :key="item.name"
+            class="pointable">
+            <v-list-tile-action @click="checkItem(index)">
+              <v-icon v-if="item.checked">check_box</v-icon>
+              <v-icon v-else>check_box_outline_blank</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-title>
+              <span v-if="item.checked" class="checked">{{ item.name }}</span>
+              <span v-else class="unchecked">{{ item.name }}</span>
+            </v-list-tile-title>
+          </v-list-tile>
+          <v-list-tile>
+            <v-list-tile-action>
+              <v-icon>check_box_outline_blank</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-text-field
+                v-model="newItemName"
+                placeholder="Text"
+                @keyup.enter="newItem"
+                @keyup.escape="newItemName = ''"
+                @blur="newItemName = ''"
+                full-width
+                ></v-text-field>
+            </v-list-tile-content>
+          </v-list-tile>
+        </v-list>
 
-      <p v-if="checklist.description !== undefined">
-        {{ checklist.description }}
-      </p>
+        <v-tooltip top>
+          <v-btn slot="activator" @click="$emit('duplicateChecklist')"><v-icon>file_copy</v-icon> Duplicate</v-btn>
+          <span>Duplicate the current checklist in the same group.</span>
+        </v-tooltip>
+        <v-tooltip top>
+          <v-btn slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
+          <span>Clear done items from the checklist</span>
+        </v-tooltip>
+        <v-tooltip top>
+          <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
+          <span>Delete the checklist</span>
+        </v-tooltip>
 
-      <v-list>
-        <v-list-tile
-          v-for="(item, index) in checklist.items"
-          :key="item.name"
-          class="pointable">
-          <v-list-tile-action @click="checkItem(index)">
-            <v-icon v-if="item.checked">check_box</v-icon>
-            <v-icon v-else>check_box_outline_blank</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-title>
-            <span v-if="item.checked" class="checked">{{ item.name }}</span>
-            <span v-else class="unchecked">{{ item.name }}</span>
-          </v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile>
-          <v-list-tile-action>
-            <v-icon>check_box_outline_blank</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-text-field
-              v-model="newItemName"
-              placeholder="Text"
-              @keyup.enter="newItem"
-              @keyup.escape="newItemName = ''"
-              @blur="newItemName = ''"
-              full-width
-              ></v-text-field>
-          </v-list-tile-content>
-        </v-list-tile>
-      </v-list>
+      </v-card>
 
-      <v-tooltip top>
-        <v-btn slot="activator"><v-icon>assignment_return</v-icon> Move to</v-btn>
-        <span>Move the checklist to a different group</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator"><v-icon>file_copy</v-icon> Copy to</v-btn>
-        <span>Copy the checklist to a new group</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
-        <span>Clear done items from the checklist</span>
-      </v-tooltip>
-      <v-tooltip top>
-        <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
-        <span>Delete the checklist</span>
-      </v-tooltip>
-
-    </div>
-    <div v-else>
-      <h1>No checklist selected</h1>
-    </div>
-  </div>
+      <div v-else>
+        <h1>No checklist selected</h1>
+      </div>
+    </v-flex>
+  </v-layout>
 </template>
 
 <script>
@@ -78,6 +88,10 @@ export default {
     },
     group: {
       type: Object,
+      mandatory: true
+    },
+    availableGroups: {
+      type: Array,
       mandatory: true
     }
   },
