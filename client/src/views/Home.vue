@@ -26,7 +26,7 @@
                   <v-btn
                     flat icon color="primary"
                     slot="activator"
-                    @click.stop="newChecklist(group.id)">
+                    @click.stop="newChecklist(group.id, 'New checklist')">
                     <v-icon>add</v-icon>
                   </v-btn>
                   <span>Add a new checklist to the group</span>
@@ -77,7 +77,7 @@
     </v-navigation-drawer>
 
     <!--  Title and toolbar !-->
-    <v-toolbar app fixed clipped-left>
+    <v-toolbar app fixed clipped-left color="primary darken-2" dark>
         <v-toolbar-side-icon @click.stop="showDrawer = !showDrawer"></v-toolbar-side-icon>
         <v-toolbar-title>MyTasks</v-toolbar-title>
     </v-toolbar>
@@ -256,9 +256,17 @@ export default {
       })
     },
 
-    newChecklist(groupId) {
-      axios.post(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/'+ groupId + '/checklists', {
-        name: 'New checklist',
+    newChecklist(groupId, name) {
+      /* Create a new checklist in the groupId.
+
+      If everyting was OK, active the group and the checklist */
+      var group = this.getGroupById(groupId)
+      if(group === null) {
+        this.$emit('showError', 'Cannot find group ' + groupId)
+        return
+      }
+      axios.post(group.uri + '/checklists', {
+        name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
         items: []
       }).then(response => {
@@ -270,9 +278,10 @@ export default {
             group.checklists = []
           }
           group.checklists.push(response.data)
+          this.activeGroup = group
+          this.activeChecklist = response.data
         }
       })
-      this.newGroupName = ''
     },
 
     updateChecklist(userId, groupId, checklistId, newData) {
@@ -337,12 +346,17 @@ export default {
       if(this.activeGroup === null || this.activeChecklist === null) {
         this.$emit('showError', 'No active checklist to delete')
       }
-      axios.delete(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + this.activeGroup.id + '/checklists/' + this.activeChecklist.id).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.loadGroup(this.activeGroup.id)
+      this.$refs.confirmDialog.confirm({message: 'Are you sure you want to delete checklist "' + this.activeChecklist.name + '"?'}).then( confirm => {
+        if(!confirm) {
+          return
         }
+        axios.delete(this.activeChecklist.uri).then(response => {
+          if(response.data.error_message !== undefined) {
+            this.$emit('showError', response.data.error_message)
+          } else {
+            this.loadGroup(this.activeGroup.id)
+          }
+        })
       })
     }
   }

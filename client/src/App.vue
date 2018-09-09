@@ -10,8 +10,14 @@
           {{ errorMessage }}
       </v-alert>
       <router-view @showError="showError"/>
-      <v-footer app fixed>
-        <span>&copy; 2018, Juanvi Vera</span>
+      <v-footer app fixed height="auto">
+        <v-layout
+          justify-center
+          row
+          wrap
+          >
+          <span class="caption">&copy; 2018, Juanvi Vera. <a href="https://github.com/Juanvvc/mytasks">Check me in Github</a>.</span>
+        </v-layout>
       </v-footer>
     </v-app>
   </div>
@@ -27,6 +33,7 @@ export default {
     showError(errorMessage) {
       this.errorMessage = errorMessage
       this.showErrorMessage = true
+      console.log(errorMessage)
     }
   }
 }
