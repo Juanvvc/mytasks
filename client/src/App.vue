@@ -1,12 +1,35 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view/>
+    <v-app id="inspire">
+      <router-view @showError="showError"/>
+      <v-footer app fixed>
+        <span>&copy; 2018, Juanvi Vera</span>
+      </v-footer>
+      <v-alert
+        v-model="showErrorMessage"
+        dismissible
+        type="success"
+        >
+          {{ errorMessage }}
+      </v-alert>
+    </v-app>
   </div>
 </template>
+
+<script>
+export default {
+  data: () => ({
+    errorMessage: null,
+    showErrorMessage: false
+  }),
+  methods: {
+    showError(errorMessage) {
+      this.errorMessage = errorMessage
+      this.showErrorMessage = true
+    }
+  }
+}
+</script>
 
 <style>
 #app {
@@ -16,5 +39,9 @@
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+
+.pointable {
+  cursor: pointer;
 }
 </style>
