@@ -1,5 +1,5 @@
-
-import model
+from project.server import app
+import project.server.model as model
 import unittest
 import shutil
 import os
@@ -7,9 +7,7 @@ import os
 
 class TestModel(unittest.TestCase):
     def setUp(self):
-        data_dir = 'data_test'
-        model.DATA_DIR = data_dir
-
+        data_dir = app.config.get('DATA_DIR')
         # Create file structure. We cannot use model.User.create* because we are testing those files!
 
         # create a user 0
@@ -34,7 +32,7 @@ class TestModel(unittest.TestCase):
         os.makedirs(os.path.join(data_dir, '3'), exist_ok=False)
 
     def tearDown(self):
-        shutil.rmtree(model.DATA_DIR)
+        shutil.rmtree(app.config.get('DATA_DIR'))
         pass
 
     def test_users(self):
@@ -46,6 +44,7 @@ class TestModel(unittest.TestCase):
         new_user = model.create_user('NEWUSER')
         self.assertEqual(type(new_user), model.User)
         self.assertEqual(new_user.id, 3)
+        self.assertEqual(new_user.info['name'], 'NEWUSER')
         # check the new user cannot login
         self.assertFalse(model.PASSWORD_FIELDNAME in new_user.info)
 

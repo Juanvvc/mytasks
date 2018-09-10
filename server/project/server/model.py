@@ -2,13 +2,10 @@
 
 import os
 import json
-import logging
 import shutil
-from passlib.apps import custom_app_context as pwd_context
+from project.server import app, logger, bcrypt
 
-logger = logging.getLogger(__name__)
 
-DATA_DIR = 'data'
 METADATA_FILE = 'metadata.json'
 PASSWORD_FIELDNAME = 'password_hash'
 
@@ -42,14 +39,14 @@ class User(object):
         Args:
             password (str): the password of the user. Only it hash is saved.
         """
-        self.info[PASSWORD_FIELDNAME] = pwd_context.hash(password)
+        self.info[PASSWORD_FIELDNAME] = bcrypt.generate_password_hash(password, app.config.get('BCRYPT_LOG_ROUNDS')).decode()
 
     def verify_password(self, password):
         """ Returns True if the password is verifiedself.
 
         If the user does not have a password hash, it is never verified. """
         if PASSWORD_FIELDNAME in self.info:
-            return pwd_context.verify(password, self.info[PASSWORD_FIELDNAME])
+            return bcrypt.check_password_hash(self.info[PASSWORD_FIELDNAME], password)
         else:
             return False
 
@@ -77,7 +74,7 @@ class User(object):
         return os.path.join(self.dirname(), METADATA_FILE)
 
     def dirname(self):
-        return os.path.join(DATA_DIR, str(self.id))
+        return os.path.join(app.config.get('DATA_DIR'), str(self.id))
 
     def create_group(self):
         existing_groups = available_groups(self.id)
@@ -189,11 +186,11 @@ class Checklist(object):
 
 def available_users():
     users = list()
-    if not os.path.isdir(DATA_DIR):
+    if not os.path.isdir(app.config.get('DATA_DIR')):
         return []
-    for directory in os.listdir(DATA_DIR):
+    for directory in os.listdir(app.config.get('DATA_DIR')):
         try:
-            user_directory = os.path.join(DATA_DIR, directory)
+            user_directory = os.path.join(app.config.get('DATA_DIR'), directory)
             if os.path.isdir(user_directory) and os.path.isfile(os.path.join(user_directory, METADATA_FILE)):
                 users.append(int(directory))
         except Exception as e:
@@ -202,7 +199,7 @@ def available_users():
 
 
 def available_groups(user_id):
-    user_directory = os.path.join(DATA_DIR, str(user_id))
+    user_directory = os.path.join(app.config.get('DATA_DIR'), str(user_id))
     if not os.path.isdir(user_directory):
         return []
     groups = list()
@@ -212,13 +209,13 @@ def available_groups(user_id):
         try:
             if os.path.isfile(os.path.join(user_directory, directory, METADATA_FILE)):
                 groups.append(int(directory))
-        except Exception as e:
+        except Exception:
             logger.warning('Group with an invalid name: %s', directory)
     return groups
 
 
 def available_checklists(user_id, group_id):
-    group_directory = os.path.join(DATA_DIR, str(user_id), str(group_id))
+    group_directory = os.path.join(app.config.get('DATA_DIR'), str(user_id), str(group_id))
     if not os.path.isdir(group_directory):
         return []
     checklists = list()
@@ -231,7 +228,7 @@ def available_checklists(user_id, group_id):
             else:
                 checklist_id = int(filename)
             checklists.append(checklist_id)
-        except Exception as e:
+        except Exception:
             logger.warning('Checklist with an invalid name: %s', filename)
     return checklists
 
@@ -250,11 +247,12 @@ def create_user(name, password=None):
     max_id = 0
     if existing_users:
         max_id = max(available_users()) + 1
-    user_directory = os.path.join(DATA_DIR, str(max_id))
+    user_directory = os.path.join(app.config.get('DATA_DIR'), str(max_id))
     # In case the directory exists but it is not yet a user, exist_ok=True
     os.makedirs(user_directory, exist_ok=True)
     os.mknod(os.path.join(user_directory, METADATA_FILE))
     user = User(max_id)
+    user.info['name'] = name
     if password is not None:
         user.hash_password(password)
     if user.save():

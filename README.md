@@ -11,5 +11,4 @@ sudo apt-get install python3-pipenv
 pip3 install --user pipenv
 ```
 
-The first time you run the server, dependencies are installed with pyenv.
-
+The first time you run the server, dependencies are installed with pypenv.

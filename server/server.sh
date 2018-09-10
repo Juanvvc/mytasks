@@ -27,4 +27,8 @@ if [ ! -e "$MYPYTHON" ]; then
     )
 fi
 
-"$MYPYTHON" "$MYTASKSHOME/mytasks.py"
+if [ -z "$1" ]; then
+    "$MYPYTHON" "$MYTASKSHOME/mytasks.py" devel
+else
+    "$MYPYTHON" "$MYTASKSHOME/mytasks.py" "$@"
+fi 

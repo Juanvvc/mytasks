@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 
+
+import project.server.model as model
 import flask
-import model
-from flask_httpauth import HTTPBasicAuth
-import logging
 
-app = flask.Flask(__name__)
-auth = HTTPBasicAuth()
-logger = logging.getLogger(__name__)
-
-BASE_URL_API = '/mytasks/api/v1.0'
+from project.server import app, auth, logger
 
 # ------------------- GENERAL FUNCTIONS
 
@@ -36,7 +31,7 @@ def verify_password(userid, password):
 # ------------------- USERS
 
 
-@app.route(BASE_URL_API + '/', methods=['GET'])
+@app.route(app.config.get('BASE_URL_API') + '/', methods=['GET'])
 @auth.login_required
 def users():
     available_users = list()
@@ -47,7 +42,7 @@ def users():
     return flask.jsonify(available_users)
 
 
-@app.route(BASE_URL_API + '/<int:user_id>', methods=['GET'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>', methods=['GET'])
 @auth.login_required
 def single_user(user_id):
     user = model.search_user(user_id)
@@ -67,7 +62,7 @@ def single_user(user_id):
 # ------------------- GROUPS
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['GET'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>', methods=['GET'])
 @auth.login_required
 def single_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -87,7 +82,7 @@ def single_group(user_id, group_id):
     return flask.jsonify(info)
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['POST', 'PUT'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>', methods=['POST', 'PUT'])
 @auth.login_required
 def update_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -103,7 +98,7 @@ def update_group(user_id, group_id):
         flask.abort(500, 'Error while saving group')
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups', methods=['POST', 'PUT'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups', methods=['POST', 'PUT'])
 @auth.login_required
 def new_group(user_id):
     user = model.search_user(user_id)
@@ -125,7 +120,7 @@ def new_group(user_id):
         flask.abort(500, 'Error while saving new group')
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>', methods=['DELETE'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>', methods=['DELETE'])
 @auth.login_required
 def delete_group(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -139,7 +134,7 @@ def delete_group(user_id, group_id):
 # ------------------- CHECKLISTS
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['GET'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['GET'])
 @auth.login_required
 def single_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
@@ -155,7 +150,7 @@ def single_checklist(user_id, group_id, checklist_id):
     return flask.jsonify(info)
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['POST', 'PUT'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['POST', 'PUT'])
 @auth.login_required
 def update_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
@@ -171,7 +166,7 @@ def update_checklist(user_id, group_id, checklist_id):
         flask.abort(500, 'Error while saving checklist')
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists', methods=['POST', 'PUT'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>/checklists', methods=['POST', 'PUT'])
 @auth.login_required
 def new_checklist(user_id, group_id):
     group = model.search_group(user_id, group_id)
@@ -191,7 +186,7 @@ def new_checklist(user_id, group_id):
         flask.abort(500, 'Error while saving new checklist')
 
 
-@app.route(BASE_URL_API + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['DELETE'])
+@app.route(app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>/checklists/<int:checklist_id>', methods=['DELETE'])
 @auth.login_required
 def delete_checklist(user_id, group_id, checklist_id):
     checklist = model.search_checklist(user_id, group_id, checklist_id)
