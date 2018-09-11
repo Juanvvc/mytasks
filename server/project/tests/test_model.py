@@ -39,6 +39,18 @@ class TestModel(unittest.TestCase):
         " Test only users 0 and 2 exist. "
         self.assertEqual(sorted(model.available_users()), [0, 2])
 
+    def test_search_user(self):
+        "Test if a user can be found usigs its userid"
+        user = model.search_user(0)
+        self.assertTrue(type(user) == model.User and user.id == 0)
+
+    def test_search_username(self):
+        "Test if a user can be found usigs its username"
+        model.create_user('NEWUSER')
+        results = model.search_username('NEWUSER')
+        self.assertTrue(len(results) == 1)
+        self.assertTrue(results[0].info.get('name', None) == 'NEWUSER')
+
     def test_user_create(self):
         " test a user can be created "
         new_user = model.create_user('NEWUSER')

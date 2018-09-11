@@ -1,15 +1,19 @@
+import os
 import flask
-import logging
 from flask_cors import CORS
-from flask_httpauth import HTTPBasicAuth
-from flask_bcrypt import Bcrypt
+
 
 app = flask.Flask(__name__)
 CORS(app)
 
-app.config.from_object('project.server.config.BaseConfig')
+app_settings = os.getenv(
+    'APP_SETTINGS',
+    'project.server.config.DevelopmentConfig'
+)
+app.config.from_object(app_settings)
 
-auth = HTTPBasicAuth()
-logger = logging.getLogger(__name__)
 
-bcrypt = Bcrypt(app)
+@app.errorhandler(404)
+@app.errorhandler(401)
+def error_handler(error):
+    return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))

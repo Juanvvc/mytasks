@@ -2,7 +2,7 @@ import os
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
-class BaseConfig:
+class BaseConfig(object):
     """Base configuration."""
     SECRET_KEY = os.getenv('SECRET_KEY', 'my_precious')
     DEBUG = False
@@ -28,5 +28,4 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     """Production configuration."""
-    SECRET_KEY = 'my_precious'
     DEBUG = False

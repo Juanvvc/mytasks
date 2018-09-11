@@ -10,7 +10,7 @@ else
 fi
 if [ -z "$MYTASKSHOME" ]; then
     MYTASKSHOME=$(dirname $($READLINK -f "$0"))
-    if [ ! -e "$MYTASKSHOME/mytasks.py" ]; then
+    if [ ! -e "$MYTASKSHOME/$0" ]; then
         echo 'I cannot automatically find the root directory of MYTASKS. Please, define the variable MYTASKSHOME'
         exit 1
     fi
@@ -28,7 +28,7 @@ if [ ! -e "$MYPYTHON" ]; then
 fi
 
 if [ -z "$1" ]; then
-    "$MYPYTHON" "$MYTASKSHOME/mytasks.py" devel
+    env APP_SETTINGS="project.server.config.DevelopmentConfig" "$MYPYTHON" "$MYTASKSHOME/manage.py" devel
 else
-    "$MYPYTHON" "$MYTASKSHOME/mytasks.py" "$@"
-fi 
+    "$MYPYTHON" "$MYTASKSHOME/manage.py" "$@"
+fi

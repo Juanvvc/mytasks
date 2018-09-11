@@ -2,10 +2,12 @@
 import os
 import unittest
 import coverage
+import logging
+from flask_script import Manager
 
 from project.server import app
 
-from flask_script import Manager
+logger = logging
 
 COV = coverage.coverage(
     branch=True,
@@ -35,6 +37,7 @@ def test():
 @manager.command
 def cov():
     """Runs the unit tests with coverage."""
+    app.config.from_object('project.server.config.TestingConfig')
     tests = unittest.TestLoader().discover('project/tests')
     result = unittest.TextTestRunner(verbosity=2).run(tests)
     if result.wasSuccessful():
@@ -54,8 +57,32 @@ def cov():
 @manager.command
 def devel():
     app.config.from_object('project.server.config.DevelopmentConfig')
-    import project.server.controller
+    import project.views
+    import project.server.auth
+
+    auth = project.server.auth.get_auth(app)
+    for blueprint in project.views.get_blueprints(app, auth):
+        app.register_blueprint(blueprint)
+
     app.run(debug=True)
+
+
+@manager.command
+def passwd(userid, password):
+    import project.server.model as model
+    user = model.search_user(int(userid))
+    if user is not None:
+        user.hash_password(password)
+        if not user.save():
+            logger.warning('Cannot save password')
+    else:
+        logger.warning('User no found: %s', userid)
+
+
+@manager.command
+def useradd(username, password):
+    import project.server.model as model
+    model.create_user(username, password)
 
 
 @manager.command

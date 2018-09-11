@@ -3,7 +3,13 @@
 import os
 import json
 import shutil
-from project.server import app, logger, bcrypt
+import logging
+from project.server import app
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt(app)
+
+logger = logging.getLogger(__name__)
 
 
 METADATA_FILE = 'metadata.json'
@@ -46,18 +52,13 @@ class User(object):
 
         If the user does not have a password hash, it is never verified. """
         if PASSWORD_FIELDNAME in self.info:
-            return bcrypt.check_password_hash(self.info[PASSWORD_FIELDNAME], password)
+            try:
+                return bcrypt.check_password_hash(self.info[PASSWORD_FIELDNAME], password)
+            except ValueError as exc:
+                logger.error(exc)
+                return False
         else:
             return False
-
-#    def group(self, group_id):
-#        return Group(self, group_id)
-
-#    def checklist(self, group_id, checklist_id):
-#        group = self.group(group_id)
-#        if group is None:
-#            return None
-#        return group.checklist(checklist_id)
 
     def save(self):
         logger.debug('Saving user %s', self.id)
@@ -269,6 +270,20 @@ def search_user(user_id):
     if user_id in available_users():
         return User(user_id)
     return None
+
+
+def search_username(username):
+    """ Gets a user, if exists.
+
+    Args:
+        user_id (int): The identifier of the user
+    """
+    results = []
+    for userid in available_users():
+        user = User(userid)
+        if user.info.get('name', None) == username:
+            results.append(user)
+    return results
 
 
 def search_group(user_id, group_id):
