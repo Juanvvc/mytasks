@@ -4,10 +4,8 @@ import os
 import json
 import shutil
 import logging
-from project.server import app
-from flask_bcrypt import Bcrypt
-
-bcrypt = Bcrypt(app)
+from flask import current_app
+import project.server.auth
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +43,7 @@ class User(object):
         Args:
             password (str): the password of the user. Only it hash is saved.
         """
-        self.info[PASSWORD_FIELDNAME] = bcrypt.generate_password_hash(password, app.config.get('BCRYPT_LOG_ROUNDS')).decode()
+        self.info[PASSWORD_FIELDNAME] = project.server.auth.hash_password(password).decode()
 
     def verify_password(self, password):
         """ Returns True if the password is verifiedself.
@@ -53,7 +51,7 @@ class User(object):
         If the user does not have a password hash, it is never verified. """
         if PASSWORD_FIELDNAME in self.info:
             try:
-                return bcrypt.check_password_hash(self.info[PASSWORD_FIELDNAME], password)
+                return project.server.auth.check_password(self.info[PASSWORD_FIELDNAME], password)
             except ValueError as exc:
                 logger.error(exc)
                 return False
@@ -75,9 +73,9 @@ class User(object):
         return os.path.join(self.dirname(), METADATA_FILE)
 
     def dirname(self):
-        return os.path.join(app.config.get('DATA_DIR'), str(self.id))
+        return os.path.join(current_app.config.get('DATA_DIR'), str(self.id))
 
-    def create_group(self):
+    def create_group(self, info=None):
         existing_groups = available_groups(self.id)
         max_id = 0
         if existing_groups:
@@ -85,7 +83,10 @@ class User(object):
         group_directory = os.path.join(self.dirname(), str(max_id))
         os.makedirs(group_directory, exist_ok=False)
         os.mknod(os.path.join(group_directory, METADATA_FILE))
-        return Group(self, max_id)
+        new_group = Group(self, max_id)
+        if info is not None:
+            new_group.info.update(info)
+        return new_group
 
 
 class Group(object):
@@ -187,11 +188,11 @@ class Checklist(object):
 
 def available_users():
     users = list()
-    if not os.path.isdir(app.config.get('DATA_DIR')):
+    if not os.path.isdir(current_app.config.get('DATA_DIR')):
         return []
-    for directory in os.listdir(app.config.get('DATA_DIR')):
+    for directory in os.listdir(current_app.config.get('DATA_DIR')):
         try:
-            user_directory = os.path.join(app.config.get('DATA_DIR'), directory)
+            user_directory = os.path.join(current_app.config.get('DATA_DIR'), directory)
             if os.path.isdir(user_directory) and os.path.isfile(os.path.join(user_directory, METADATA_FILE)):
                 users.append(int(directory))
         except Exception as e:
@@ -200,7 +201,7 @@ def available_users():
 
 
 def available_groups(user_id):
-    user_directory = os.path.join(app.config.get('DATA_DIR'), str(user_id))
+    user_directory = os.path.join(current_app.config.get('DATA_DIR'), str(user_id))
     if not os.path.isdir(user_directory):
         return []
     groups = list()
@@ -216,7 +217,7 @@ def available_groups(user_id):
 
 
 def available_checklists(user_id, group_id):
-    group_directory = os.path.join(app.config.get('DATA_DIR'), str(user_id), str(group_id))
+    group_directory = os.path.join(current_app.config.get('DATA_DIR'), str(user_id), str(group_id))
     if not os.path.isdir(group_directory):
         return []
     checklists = list()
@@ -248,7 +249,7 @@ def create_user(name, password=None):
     max_id = 0
     if existing_users:
         max_id = max(available_users()) + 1
-    user_directory = os.path.join(app.config.get('DATA_DIR'), str(max_id))
+    user_directory = os.path.join(current_app.config.get('DATA_DIR'), str(max_id))
     # In case the directory exists but it is not yet a user, exist_ok=True
     os.makedirs(user_directory, exist_ok=True)
     os.mknod(os.path.join(user_directory, METADATA_FILE))

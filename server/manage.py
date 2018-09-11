@@ -14,8 +14,7 @@ COV = coverage.coverage(
     include='project/*',
     omit=[
         'project/tests/*',
-        'project/server/config.py',
-        'project/server/*/__init__.py'
+        'project/server/config.py'
     ]
 )
 COV.start()
@@ -58,12 +57,7 @@ def cov():
 def devel():
     app.config.from_object('project.server.config.DevelopmentConfig')
     import project.views
-    import project.server.auth
-
-    auth = project.server.auth.get_auth(app)
-    for blueprint in project.views.get_blueprints(app, auth):
-        app.register_blueprint(blueprint)
-
+    project.views.register(app)
     app.run(debug=True)
 
 

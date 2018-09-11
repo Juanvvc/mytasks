@@ -1,12 +1,16 @@
 
 import logging
+import flask
 from flask_httpauth import HTTPBasicAuth
+from flask_bcrypt import Bcrypt
+from flask import current_app
 
 __auth = None
+__app = None
 
 
-def get_auth(app, logger=None):
-    global __auth
+def get_auth(logger=None):
+    global __auth, __bcrypt
 
     if logger is None:
         logger = logging
@@ -30,6 +34,20 @@ def get_auth(app, logger=None):
             return False
         return True
 
+    @auth.error_handler
+    def auth_error():
+        return flask.make_response(flask.jsonify(dict(error_message='Unauthorized', status=401)))
+
     __auth = auth
 
     return __auth
+
+
+def hash_password(password):
+    bcrypt = Bcrypt(flask.current_app)
+    return bcrypt.generate_password_hash(password, current_app.config.get('BCRYPT_LOG_ROUNDS'))
+
+
+def check_password(hashed_password, password):
+    bcrypt = Bcrypt(flask.current_app)
+    return bcrypt.check_password_hash(hashed_password, password)
