@@ -1,5 +1,5 @@
 from project.server import app
-import project.server.model as model
+import project.model as model
 import unittest
 import shutil
 import os

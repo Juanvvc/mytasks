@@ -1,9 +1,9 @@
 import flask
-import project.server.model as model
+import project.model as model
 
 
-def get_blueprint(app, auth=None):
-    url_prefix = app.config.get('BASE_URL_API') + '/<int:user_id>/groups/<int:group_id>/checklists'
+def get_blueprint(auth=None):
+    url_prefix = '/<int:user_id>/groups/<int:group_id>/checklists'
     blueprint = flask.Blueprint('checklists', __name__, url_prefix=url_prefix)
     blueprint.add_url_rule('/', view_func=auth.login_required(new_checklist), methods=['POST', 'PUT'], endpoint='new')
     blueprint.add_url_rule('/<int:checklist_id>', view_func=auth.login_required(single_checklist), methods=['GET'], endpoint='info')

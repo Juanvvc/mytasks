@@ -4,14 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask = "*"
-flask-cors = "*"
-flask-httpauth = "*"
-flask-bcrypt = "*"
-flask-script = "*"
+Flask = "*"
+Flask-Cors = "*"
+Flask-HTTPAuth = "*"
+Flask-Bcrypt = "*"
+Flask-Script = "*"
 coverage = "*"
 jwt = "*"
-flask-testing = "*"
+Flask-Testing = "*"
+bcrypt = "*"
+Flask-Auth = "*"
 
 [dev-packages]
 

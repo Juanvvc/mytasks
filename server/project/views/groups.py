@@ -1,14 +1,14 @@
 import flask
-import project.server.model as model
+import project.model as model
 
 
-def get_blueprint(app, auth=None):
-    url_prefix = app.config.get('BASE_URL_API') + '/<int:user_id>/groups'
+def get_blueprint(auth=None):
+    url_prefix = '/<int:user_id>/groups'
     blueprint = flask.Blueprint('groups', __name__, url_prefix=url_prefix)
     blueprint.add_url_rule('/', view_func=auth.login_required(new_group), methods=['POST', 'PUT'], endpoint='new')
     blueprint.add_url_rule('/<int:group_id>', view_func=auth.login_required(single_group), methods=['GET'], endpoint='info')
     blueprint.add_url_rule('/<int:group_id>', view_func=auth.login_required(update_group), methods=['POST', 'PUT'], endpoint='update')
-    blueprint.add_url_rule('/<int:group_id>', view_func=auth.login_required(delete_group), methods=['DEETE'], endpoint='delete')
+    blueprint.add_url_rule('/<int:group_id>', view_func=auth.login_required(delete_group), methods=['DELETE'], endpoint='delete')
     return blueprint
 
 

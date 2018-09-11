@@ -1,10 +1,9 @@
 import flask
-import project.server.model as model
+import project.model as model
 
 
-def get_blueprint(app, auth=None):
-    url_prefix = app.config.get('BASE_URL_API')
-    blueprint = flask.Blueprint('users', __name__, url_prefix=url_prefix)
+def get_blueprint(auth=None):
+    blueprint = flask.Blueprint('users', __name__)
     blueprint.add_url_rule('/', view_func=auth.login_required(users), methods=['GET'], endpoint='available')
     blueprint.add_url_rule('/<int:user_id>', view_func=auth.login_required(single_user), methods=['GET'], endpoint='info')
     return blueprint
