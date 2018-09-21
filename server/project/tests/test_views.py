@@ -3,7 +3,6 @@ import flask_testing
 import json
 import flask
 import project.model as model
-from project.server import app
 import project.server.auth
 import project.views
 
@@ -16,6 +15,18 @@ def auth_header(userid, password):
 
 class TestViews(flask_testing.TestCase):
     def create_app(self):
+        app = flask.Flask(__name__)
+        app.config.from_object('project.server.config.TestingConfig')
+        project.model.configure_model(app)
+        project.views.register(app)
+
+        @app.errorhandler(400)
+        @app.errorhandler(404)
+        @app.errorhandler(401)
+        @app.errorhandler(500)
+        def error_handler(error):
+            return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))
+
         return app
 
     def setUp(self):

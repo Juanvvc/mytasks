@@ -63,6 +63,6 @@ def delete_checklist(user_id, group_id, checklist_id):
     if checklist is None:
         flask.abort(404, 'Checklist not found')
     if checklist.delete():
-        return flask.jsonify({'status': '200', 'message': 'Checklist {} deleted'.format(checklist_id)})
+        return flask.jsonify({'status': 200, 'message': 'Checklist {} deleted'.format(checklist_id)})
     else:
         flask.abort(500, 'Error while deleting checklist')

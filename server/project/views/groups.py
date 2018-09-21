@@ -69,6 +69,6 @@ def delete_group(user_id, group_id):
     if group is None:
         flask.abort(404, 'Group not found')
     if group.delete():
-        return flask.jsonify({'status': '200', 'message': 'Group {} deleted'.format(group_id)})
+        return flask.jsonify({'status': 200, 'message': 'Group {} deleted'.format(group_id)})
     else:
         flask.abort(500, 'Error while deleting group')

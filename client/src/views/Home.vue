@@ -80,6 +80,15 @@
     <v-toolbar app fixed clipped-left color="primary darken-2" dark>
         <v-toolbar-side-icon @click.stop="showDrawer = !showDrawer"></v-toolbar-side-icon>
         <v-toolbar-title>MyTasks</v-toolbar-title>
+
+        <v-spacer></v-spacer>
+
+        <v-tooltip bottom>
+          <v-btn icon slot="activator" @click="logout">
+            <v-icon>exit_to_app</v-icon>
+          </v-btn>
+          <span>Logout</span>
+        </v-tooltip>
     </v-toolbar>
 
     <!-- Main content -->
@@ -106,30 +115,9 @@
 // @ is an alias to /src
 import CheckList from '@/components/CheckList.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import MyTasksClient from '@/libs/mytasksclient.js'
 
-const axios = require('axios')
-
-var MYTASKS_SERVER = 'http://localhost:5000/mytasks/api/v1.0'
-
-var TEST_DATA = [
-  {
-    name: 'One',
-    active: true,
-    id: 0,
-    checklists: [
-      {
-        name: "1",
-        id: 1,
-        items: [
-          {'name': 'item1', checked: true},
-          {'name': 'item2', checked: false},
-        ]
-      },
-      {name: "222", id: 2}
-    ]
-  },
-  {name: 'Two', active: false, id: 1}
-]
+var MYTASKS_SERVER = 'http://127.0.0.1:5000' ///mytasks/api/v1.0'
 
 export default {
   name: 'home',
@@ -147,6 +135,15 @@ export default {
   }),
 
   mounted () {
+    // get the login information. If not logged, show the login dialog
+    var username = sessionStorage.getItem('username')
+    var password = sessionStorage.getItem('password')
+
+    if(username === undefined || username === null) {
+      this.$router.push({ path: 'login' })
+    }
+
+    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username, password})
     this.loadUser(0)
   },
 
@@ -168,7 +165,7 @@ export default {
     },
 
     loadUser(userId) {
-      axios.get(MYTASKS_SERVER + '/' + userId).then(response => {
+      this.mytasks.get(`${userId}`).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
@@ -184,7 +181,7 @@ export default {
       /* get data about a group from the server, and set it as active.
 
       If a checklistIf is passed, load also the chccklist */
-      axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId).then( response => {
+      this.mytasks.get(`${this.activeUser.id}/groups/${groupId}`).then( response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
@@ -207,7 +204,7 @@ export default {
     },
 
     newGroup(name) {
-      axios.post(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups', {
+      this.mytasks.post(`${this.activeUser.id}/groups/`, {
         name: name,
         description: '',
         checklists: []
@@ -217,6 +214,8 @@ export default {
         } else {
           this.groups.push(response.data)
         }
+      }).catch( () => {
+        this.$emit('showError', 'Error connecting to server')
       })
       this.newGroupName = ''
     },
@@ -231,7 +230,7 @@ export default {
         if(!confirm) {
           return
         }
-        axios.delete(group.uri).then(response => {
+        this.mytasks.delete(group.uri).then(response => {
           if(response.data.error_message !== undefined) {
             this.$emit('showError', response.data.error_message)
           } else {
@@ -243,7 +242,7 @@ export default {
 
     loadChecklist (groupId, checklistId) {
       /* Set a group and a checklist as active. */
-      axios.get(MYTASKS_SERVER + '/' + this.activeUser.id + '/groups/' + groupId + '/checklists/' + checklistId).then(response => {
+      this.mytasks.get(`${this.activeUser.id}/groups/${groupId}/checklists/${checklistId}`).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
@@ -262,7 +261,7 @@ export default {
         this.$emit('showError', 'Cannot find group ' + groupId)
         return
       }
-      axios.post(group.uri + '/checklists', {
+      this.mytasks.post(`${group.uri}/checklists/`, {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
         items: []
@@ -278,16 +277,20 @@ export default {
           this.activeGroup = group
           this.activeChecklist = response.data
         }
+      }).catch( () => {
+        this.$emit('showError', 'Network error')
       })
     },
 
     updateChecklist(userId, groupId, checklistId, newData) {
-      axios.post(MYTASKS_SERVER + '/' +userId + '/groups/'+ groupId + '/checklists/' + checklistId, newData).then(response => {
+      this.mytasks.post(`${this.activeUser.id}/groups/${groupId}/checklists/${checklistId}`, newData).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
           this.activeChecklist = response.data
         }
+      }).catch( () => {
+        this.$emit('showError', 'Network error')
       })
     },
 
@@ -335,7 +338,6 @@ export default {
     },
 
     changeMetadata(metadata) {
-      console.log(metadata)
       this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, metadata)
     },
 
@@ -347,7 +349,7 @@ export default {
         if(!confirm) {
           return
         }
-        axios.delete(this.activeChecklist.uri).then(response => {
+        this.mytasks.delete(this.activeChecklist.uri).then(response => {
           if(response.data.error_message !== undefined) {
             this.$emit('showError', response.data.error_message)
           } else {
@@ -373,12 +375,12 @@ export default {
         items: this.activeChecklist.items
       }
       // create a new checklist in toGroup with this data
-      axios.post(toGroup.uri + '/checklists', newData).then( response => {
+      this.mytasks.post(`${toGroup.uri}/checklists/`, newData).then( response => {
         if(response.data.errorMessage !== undefined) {
           this.$emit('showError', response.data.errorMessage)
         } else {
           // remove the old checklist
-          axios.delete(this.activeChecklist.uri).then(response => {
+          this.mytasks.delete(this.activeChecklist.uri).then(response => {
             if(response.data.status !== 200) {
               this.$emit('Cannot delete old checklist: ' + response.data.showError)
             }
@@ -386,6 +388,8 @@ export default {
           // load the group and checklist
           this.loadGroup(toGroupId, response.data.id)
         }
+      }).catch( () => {
+        this.$emit('showError', 'Network error')
       })
     },
 
@@ -401,14 +405,21 @@ export default {
         description: this.activeChecklist.description,
         items: this.activeChecklist.items
       }
-      axios.post(this.activeGroup.uri + '/checklists', newData).then( response => {
+      this.mytasks.post(`${this.activeGroup.uri}/checklists/`, newData).then( response => {
         if(response.data.errorMessage !== undefined) {
           this.$emit('showError', response.data.errorMessage)
         } else {
           // load the group and the new checklist
           this.loadGroup(this.activeGroup.id, response.data.id)
         }
+      }).catch( () => {
+        this.$emit('showError', 'Network error')
       })
+    },
+
+    logout() {
+      sessionStorage.clear()
+      this.$router.push({name: 'login'})
     }
   }
 }

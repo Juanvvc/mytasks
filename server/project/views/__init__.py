@@ -1,9 +1,7 @@
-import flask
 import project.views.users
 import project.views.groups
 import project.views.checklists
 import project.server.auth
-import logging
 
 
 def get_blueprints(auth):
@@ -14,13 +12,7 @@ def get_blueprints(auth):
     ]
 
 
-def register(app=None, logger=None):
-    if app is None:
-        app = flask.current_app
-
-    if logger is None:
-        logger = logging
-
+def register(app):
     auth = project.server.auth.create_auth()
 
     for blueprint in get_blueprints(auth):

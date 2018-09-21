@@ -1,33 +1,75 @@
-#!/usr/bin/env python3
 import os
+import click
 import unittest
-import coverage
-import logging
-from flask_script import Manager
-
-import project.server
+from flask_cors import CORS
+import flask
 import project.views
 
-logger = logging
-
-COV = coverage.coverage(
-    branch=True,
-    include='project/*',
-    omit=[
-        'project/tests/*',
-        'project/server/config.py'
-    ]
+app_settings = os.getenv(
+    'APP_SETTINGS',
+    'project.server.config.DevelopmentConfig'
 )
-COV.start()
+app = flask.Flask(__name__)
+app.config.from_object(app_settings)
+CORS(app)
 
-manager = Manager(project.server.app)
+project.model.configure_model(app)
+project.views.register(app)
 
 
-@manager.command
+@app.errorhandler(400)
+@app.errorhandler(404)
+@app.errorhandler(401)
+@app.errorhandler(500)
+def error_handler(error):
+    return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))
+
+
+@app.cli.command()
+def list_routes():
+    project.views.register(project.server.app)
+
+    import urllib.parse
+    output = []
+    for rule in project.server.app.url_map.iter_rules():
+        methods = ','.join(rule.methods)
+        line = urllib.parse.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, rule))
+        output.append(line)
+
+    for line in sorted(output):
+        print(line)
+
+
+@app.cli.command()
+@click.argument('userid')
+@click.argument('password')
+def passwd(userid, password):
+    app.config.from_object('project.server.config.DevelopmentConfig')
+    project.model.configure_model(app)
+
+    import project.model as model
+    user = model.search_user(int(userid))
+    if user is not None:
+        user.hash_password(password)
+        if not user.save():
+            app.logger.warning('Cannot save password')
+    else:
+        app.logger.warning('User no found: %s', userid)
+
+
+@app.cli.command()
+@click.argument('username')
+@click.argument('password')
+def useradd(username, password):
+    import project.model as model
+    model.create_user(username, password)
+
+
+@app.cli.command()
 def test():
     """Runs the unit tests without test coverage."""
-    project.server.configure_app('project.server.config.TestingConfig')
-    project.views.register(project.server.app)
+    app.config.from_object('project.server.config.TestingConfig')
+    project.model.configure_model(app)
 
     tests = unittest.TestLoader().discover('project/tests', pattern='test*.py')
     result = unittest.TextTestRunner(verbosity=2).run(tests)
@@ -36,11 +78,22 @@ def test():
     return 1
 
 
-@manager.command
+@app.cli.command()
 def cov():
     """Runs the unit tests with coverage."""
-    project.server.configure_app('project.server.config.TestingConfig')
-    project.views.register(project.server.app)
+    import coverage
+    COV = coverage.coverage(
+        branch=True,
+        include='project/*',
+        omit=[
+            'project/tests/*',
+            'project/server/config.py'
+        ]
+    )
+    COV.start()
+
+    app.config.from_object('project.server.config.TestingConfig')
+    project.model.configure_model(app)
 
     tests = unittest.TestLoader().discover('project/tests')
     result = unittest.TextTestRunner(verbosity=2).run(tests)
@@ -56,55 +109,3 @@ def cov():
         COV.erase()
         return 0
     return 1
-
-
-@manager.command
-def list_routes():
-    project.views.register(project.server.app)
-
-    import urllib.parse
-    output = []
-    for rule in project.server.app.url_map.iter_rules():
-        methods = ','.join(rule.methods)
-        line = urllib.parse.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, rule))
-        output.append(line)
-
-    for line in sorted(output):
-        print(line)
-
-
-@manager.command
-def devel():
-    project.server.configure_app('project.server.config.DevelopmentConfig')
-    project.views.register(project.server.app)
-    project.server.app.run(debug=True)
-
-
-@manager.command
-def passwd(userid, password):
-    project.server.configure_app('project.server.config.DevelopmentConfig')
-    import project.model as model
-    user = model.search_user(int(userid))
-    if user is not None:
-        user.hash_password(password)
-        if not user.save():
-            logger.warning('Cannot save password')
-    else:
-        logger.warning('User no found: %s', userid)
-
-
-@manager.command
-def useradd(username, password):
-    import project.server.model as model
-    model.create_user(username, password)
-
-
-@manager.command
-def run():
-    project.server.configure_app('project.server.config.ProductionConfig')
-    project.views.register(project.server.app)
-    project.server.app.run(debug=True)
-
-
-if __name__ == '__main__':
-    manager.run()

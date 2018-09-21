@@ -7,11 +7,21 @@ import logging
 import bcrypt
 
 logger = logging.getLogger(__name__)
-
 METADATA_FILE = 'metadata.json'
 PASSWORD_FIELDNAME = 'password_hash'
 # The Flask app must change this to the real path
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+def configure_model(app):
+    """ Configures the model from a Flask app.
+
+    Attrs:
+        :app (Flask): The Flask application to read the configuration from
+    """
+    global logger, DATA_DIR
+    DATA_DIR = app.config.get('DATA_DIR', DATA_DIR)
+    logger = app.logger
 
 
 class User(object):
@@ -86,6 +96,7 @@ class User(object):
         new_group = Group(self, max_id)
         if info is not None:
             new_group.info.update(info)
+            new_group.save()
         return new_group
 
 
@@ -126,6 +137,7 @@ class Group(object):
         logger.debug('Deleting group %s/%s', self.user.id, self.id)
         # can only delete empty groups
         if available_checklists(self.user.id, self.id):
+            logger.warning('Trying to delete non empty groupid=%s', self.id)
             return False
         shutil.rmtree(self.dirname())
         return True
@@ -136,13 +148,17 @@ class Group(object):
     def dirname(self):
         return os.path.join(self.user.dirname(), str(self.id))
 
-    def create_checklist(self):
+    def create_checklist(self, info=None):
         existing_checklists = available_checklists(self.user.id, self.id)
         max_id = 0
         if existing_checklists:
             max_id = max(existing_checklists) + 1
         os.mknod(os.path.join(self.dirname(), '{}.json'.format(max_id)))
-        return Checklist(self, max_id)
+        new_checklist = Checklist(self, max_id)
+        if info is not None:
+            new_checklist.info.update(info)
+            new_checklist.save()
+        return new_checklist
 
 
 class Checklist(object):

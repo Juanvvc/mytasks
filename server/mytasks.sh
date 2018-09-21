@@ -28,7 +28,13 @@ if [ ! -e "$MYPYTHON" ]; then
 fi
 
 if [ -z "$1" ]; then
-    env APP_SETTINGS="project.server.config.DevelopmentConfig" "$MYPYTHON" "$MYTASKSHOME/manage.py" devel
+    env \
+        APP_SETTINGS="project.server.config.DevelopmentConfig" \
+        FLASK_APP="manage" \
+        pipenv run flask run
 else
-    "$MYPYTHON" "$MYTASKSHOME/manage.py" "$@"
+    env \
+        APP_SETTINGS="project.server.config.DevelopmentConfig" \
+        FLASK_APP="manage" \
+        pipenv run flask "$@"
 fi

@@ -1,13 +1,13 @@
-from project.server import app
 import project.model as model
 import unittest
 import shutil
 import os
+import flask
 
 
 class TestModel(unittest.TestCase):
     def setUp(self):
-        data_dir = app.config.get('DATA_DIR')
+        data_dir = flask.current_app.config.get('DATA_DIR')
         # Create file structure. We cannot use model.User.create* because we are testing those files!
 
         # create a user 0
@@ -32,7 +32,7 @@ class TestModel(unittest.TestCase):
         os.makedirs(os.path.join(data_dir, '3'), exist_ok=False)
 
     def tearDown(self):
-        shutil.rmtree(app.config.get('DATA_DIR'))
+        shutil.rmtree(flask.current_app.config.get('DATA_DIR'))
         pass
 
     def test_users(self):
@@ -105,9 +105,12 @@ class TestModel(unittest.TestCase):
         # User 2 has no groups. A new group will be created as 0.
         user = model.search_user(2)
         self.assertEqual(type(user), model.User)
-        group = user.create_group()
-        self.assertEqual(type(group), model.Group)
-        self.assertEqual(group.id, 0)
+        group = user.create_group({'name': 'NEW_GROUP'})
+
+        group_new = model.search_group(2, group.id)
+        self.assertEqual(type(group_new), model.Group)
+        self.assertEqual(group_new.id, 0)
+        self.assertTrue('name' in group_new.info and group_new.info.get('name', None) == 'NEW_GROUP')
 
         # User 0 has a group 1. A new group will be created as 2.
         user = model.search_user(0)
