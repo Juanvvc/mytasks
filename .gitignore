@@ -4,3 +4,4 @@ __pycache__
 *.swp
 server/data
 server/data-test
+server/data.zip

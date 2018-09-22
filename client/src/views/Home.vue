@@ -77,7 +77,7 @@
     </v-navigation-drawer>
 
     <!--  Title and toolbar !-->
-    <v-toolbar app fixed clipped-left color="primary darken-2" dark>
+    <v-toolbar app fixed clipped-left color="primary darken-4" dark>
         <v-toolbar-side-icon @click.stop="showDrawer = !showDrawer"></v-toolbar-side-icon>
         <v-toolbar-title>MyTasks</v-toolbar-title>
 
@@ -104,6 +104,7 @@
         @changeMetadata="changeMetadata"
         @changeChecklistGroup="changeChecklistGroup"
         @duplicateChecklist="duplicateChecklist"
+        @newChecklist="newChecklist(activeGroup.id, 'New checklist')"
         />
     </v-content>
 

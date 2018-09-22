@@ -2,7 +2,7 @@
   <v-layout row wrap>
     <v-flex xs12 sm10 offset-sm1>
       <v-card v-if="checklist !== null">
-        <v-toolbar color="secondary" dark>
+        <v-toolbar color="secondary">
             <v-flex xs12 sm6>
               <v-text-field
                 label="Name, only saved after pressing ENTER"
@@ -73,7 +73,19 @@
       </v-card>
 
       <div v-else>
-        <h1>No checklist selected</h1>
+        <v-card>
+          <v-toolbar color="secondary">
+            <v-toolbar-title>No checklist selected in group "{{ group.name }}"</v-toolbar-title>
+          </v-toolbar>
+
+
+          <v-btn
+            color="primary"
+            @click.stop="$emit('newChecklist')">
+            <v-icon>add</v-icon> Add new checklist
+          </v-btn>
+
+        </v-card>
       </div>
     </v-flex>
   </v-layout>

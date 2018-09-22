@@ -52,4 +52,10 @@ export default {
 .pointable {
   cursor: pointer;
 }
+
+.application--wrap {
+  background-image: url("assets/background.jpg");
+  background-size: cover;
+  background-color: #222;
+}
 </style>
