@@ -22,7 +22,7 @@ class TestTestingConfig(TestCase):
         return app
 
     def test_app_is_testing(self):
-        self.assertTrue(current_app.config['DATA_DIR'].endswith('-test'))
+        self.assertTrue(current_app.config['MONGODB'].endswith('-testing'))
         self.assertTrue(current_app.config['DEBUG'])
 
 

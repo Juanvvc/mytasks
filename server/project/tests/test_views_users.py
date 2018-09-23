@@ -28,24 +28,24 @@ class TestUsersView(flask_testing.TestCase):
         return app
 
     def setUp(self):
-        user = project.model.create_user('USER1', 'PASSWORD1')
-        user.create_group({'name': 'GROUP1'})
+        self.user = project.model.create_user('USER1', 'PASSWORD1')
+        self.user.create_group({'name': 'GROUP1'})
 
     def tearDown(self):
-        import shutil
-        shutil.rmtree(project.model.DATA_DIR)
+        project.model.db.command('dropDatabase')
 
     def test_availableusers(self):
         with self.client:
-            response = self.client.get('/', headers={'Authorization': auth_header(0, 'PASSWORD1')})
+            response = self.client.get('/', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
+            self.assertFalse('error_message' in data)
             self.assertTrue(type(data) == list)
             self.assertTrue(len(data) == 1)
             self.assertTrue('name' in data[0] and data[0]['name'] == 'USER1')
 
     def test_oneuser(self):
         with self.client:
-            response = self.client.get('/0', headers={'Authorization': auth_header(0, 'PASSWORD1')})
+            response = self.client.get('/{}'.format(self.user.id()), headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data and data['name'] == 'USER1')

@@ -8,7 +8,8 @@ class BaseConfig(object):
     DEBUG = False
     BCRYPT_LOG_ROUNDS = 13
     BASE_URL_API = '/mytasks/api/v1.0'
-    DATA_DIR = os.path.join(basedir, 'data')
+    MONGOURL = 'mongodb://localhost:27017/'
+    MONGODB = 'mytasks'
 
 
 class DevelopmentConfig(BaseConfig):
@@ -23,7 +24,7 @@ class TestingConfig(BaseConfig):
     TESTING = True
     BCRYPT_LOG_ROUNDS = 4
     PRESERVE_CONTEXT_ON_EXCEPTION = False
-    DATA_DIR = os.path.join(basedir, 'data-test')
+    MONGODB = 'mytasks-testing'
 
 
 class ProductionConfig(BaseConfig):

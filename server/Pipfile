@@ -13,6 +13,7 @@ jwt = "*"
 Flask-Testing = "*"
 bcrypt = "*"
 Flask-Auth = "*"
+pymongo = "*"
 
 [dev-packages]
 

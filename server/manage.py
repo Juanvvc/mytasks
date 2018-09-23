@@ -26,35 +26,20 @@ def error_handler(error):
 
 
 @app.cli.command()
-def list_routes():
-    project.views.register(project.server.app)
-
-    import urllib.parse
-    output = []
-    for rule in project.server.app.url_map.iter_rules():
-        methods = ','.join(rule.methods)
-        line = urllib.parse.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, rule))
-        output.append(line)
-
-    for line in sorted(output):
-        print(line)
-
-
-@app.cli.command()
-@click.argument('userid')
+@click.argument('username')
 @click.argument('password')
-def passwd(userid, password):
+def passwd(username, password):
     app.config.from_object('project.server.config.DevelopmentConfig')
     project.model.configure_model(app)
 
     import project.model as model
-    user = model.search_user(int(userid))
+    user = model.search_username(username)
     if user is not None:
         user.hash_password(password)
         if not user.save():
             app.logger.warning('Cannot save password')
     else:
-        app.logger.warning('User no found: %s', userid)
+        app.logger.warning('User no found: %s', username)
 
 
 @app.cli.command()

@@ -45,6 +45,10 @@
 
 <script>
 
+import MyTasksClient from '@/libs/mytasksclient.js'
+
+var MYTASKS_SERVER = 'http://127.0.0.1:5000' ///mytasks/api/v1.0'
+
 export default {
   name: 'home',
 
@@ -59,9 +63,18 @@ export default {
 
   methods: {
     login() {
-      sessionStorage.setItem('username', this.username)
-      sessionStorage.setItem('password', this.password)
-      this.$router.push({ name: 'home' })
+      var mytasks = new MyTasksClient(MYTASKS_SERVER)
+      mytasks.login({username: this.username, password: this.password}).then( response => {
+        if(response.data.error_message !== undefined) {
+          this.$emit('showError', response.data.error_message)
+        } else {
+          sessionStorage.setItem('username', this.username)
+          sessionStorage.setItem('password', this.password)
+          sessionStorage.setItem('userid', response.data._id)
+          this.$router.push({ name: 'home' })
+        }
+      })
+
     }
   }
 }

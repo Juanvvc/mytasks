@@ -23,7 +23,7 @@ cd server
 - `./mytasks.sh test`: run tests on the server
 - `./mytasks.sh cov`: run tests on the server with coverage
 - `./mytasks.sh passwd USER PASSWORD`: change a password for a user
-- `./mytasks.sh list_routes`: list available routes
+- `./mytasks.sh routes`: list available routes
 
 ## Client
 

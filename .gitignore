@@ -5,3 +5,4 @@ __pycache__
 server/data
 server/data-test
 server/data.zip
+server/tmp

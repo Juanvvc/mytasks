@@ -139,13 +139,14 @@ export default {
     // get the login information. If not logged, show the login dialog
     var username = sessionStorage.getItem('username')
     var password = sessionStorage.getItem('password')
+    var userid = sessionStorage.getItem('userid')
 
     if(username === undefined || username === null) {
       this.$router.push({ path: 'login' })
     }
 
     this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username, password})
-    this.loadUser(0)
+    this.loadUser(userid)
   },
 
   methods: {

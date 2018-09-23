@@ -30,12 +30,11 @@ class TestViews(flask_testing.TestCase):
         return app
 
     def setUp(self):
-        user = model.create_user('USER1', 'PASSWORD1')
-        user.create_group({'name': 'GROUP1'})
+        self.user = model.create_user('USER1', 'PASSWORD1')
+        self.user.create_group({'name': 'GROUP1'})
 
     def tearDown(self):
-        import shutil
-        shutil.rmtree(model.DATA_DIR)
+        project.model.db.command('dropDatabase')
 
     def test_blueprint(self):
         auth = project.server.auth.create_auth()
@@ -46,29 +45,30 @@ class TestViews(flask_testing.TestCase):
 
     def test_notlogged(self):
         with self.client:
-            response = self.client.get('/0')
+            response = self.client.get('/{}'.format(self.user.id()))
             data = json.loads(response.data.decode())
             self.assertEqual(data['status'], 401)
 
     def test_baspassword(self):
         with self.client:
-            response = self.client.get('/0', headers={'Authorization': auth_header(0, 'BADWOLF')})
+            response = self.client.get('/{}'.format(self.user.id()), headers={'Authorization': auth_header('USER1', 'BADWOLF')})
             data = json.loads(response.data.decode())
             self.assertEqual(data['status'], 401)
 
     def test_logged(self):
         with self.client:
-            response = self.client.get('/0', headers={'Authorization': auth_header(0, 'PASSWORD1')})
+            response = self.client.get('/{}'.format(self.user.id()), headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
+            self.assertFalse('error_message' in data)
             self.assertEqual(data['name'], 'USER1')
 
     def test_404(self):
         with self.client:
-            response = self.client.get('/1', headers={'Authorization': auth_header(0, 'PASSWORD1')})
+            response = self.client.get('/1234567890ab1234567890ab', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertEqual(data['status'], 404)
 
-            response = self.client.get('/XX', headers={'Authorization': auth_header(0, 'PASSWORD1')})
+            response = self.client.get('/XX', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertEqual(data['status'], 404)
 

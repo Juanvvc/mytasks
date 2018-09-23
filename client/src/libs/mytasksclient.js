@@ -35,4 +35,9 @@ export default class {
             return axios.delete(`${this.baseurl}/${url}`, {auth: this.auth})
         }
     }
+
+    login(auth) {
+        this.auth = auth
+        return axios.get(`${this.baseurl}/login`, {auth: this.auth})
+    }
 }

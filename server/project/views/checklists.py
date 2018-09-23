@@ -3,17 +3,17 @@ import project.model as model
 
 
 def get_blueprint(auth=None):
-    url_prefix = '/<int:user_id>/groups/<int:group_id>/checklists'
+    url_prefix = '/<user_id>/groups/<group_id>/checklists'
     blueprint = flask.Blueprint('checklists', __name__, url_prefix=url_prefix)
     blueprint.add_url_rule('/', view_func=auth.login_required(new_checklist), methods=['POST', 'PUT'], endpoint='new')
-    blueprint.add_url_rule('/<int:checklist_id>', view_func=auth.login_required(single_checklist), methods=['GET'], endpoint='info')
-    blueprint.add_url_rule('/<int:checklist_id>', view_func=auth.login_required(update_checklist), methods=['POST', 'PUT'], endpoint='update')
-    blueprint.add_url_rule('/<int:checklist_id>', view_func=auth.login_required(delete_checklist), methods=['DELETE'], endpoint='delete')
+    blueprint.add_url_rule('/<checklist_id>', view_func=auth.login_required(single_checklist), methods=['GET'], endpoint='info')
+    blueprint.add_url_rule('/<checklist_id>', view_func=auth.login_required(update_checklist), methods=['POST', 'PUT'], endpoint='update')
+    blueprint.add_url_rule('/<checklist_id>', view_func=auth.login_required(delete_checklist), methods=['DELETE'], endpoint='delete')
     return blueprint
 
 
 def new_checklist(user_id, group_id):
-    group = model.search_group(user_id, group_id)
+    group = model.search_group(group_id)
     if group is None:
         flask.abort(404, 'Group not found')
     new_info = flask.request.json
@@ -22,21 +22,24 @@ def new_checklist(user_id, group_id):
     name = new_info.get('name', None)
     if name is None:
         flask.abort(400, 'A checklists needs a name')
-    checklist = group.create_checklist()
-    checklist.info.update(new_info)
+    checklist = group.create_checklist(new_info)
     if(checklist.save()):
-        return single_checklist(user_id, group_id, checklist.id)
+        return single_checklist(user_id, group_id, str(checklist.id()))
     else:
         flask.abort(500, 'Error while saving new checklist')
 
 
 def single_checklist(user_id, group_id, checklist_id):
-    checklist = model.search_checklist(user_id, group_id, checklist_id)
+    checklist = model.search_checklist(checklist_id)
     if checklist is None:
         flask.abort(404, 'Checklist not found')
-    info = checklist.info
+    info = checklist.info.copy()
+    info['_id'] = str(info['_id'])
+    if 'userid' in info:
+        info['userid'] = str(info['userid'])
+    if 'groupid' in info:
+        info['groupid'] = str(info['groupid'])
     info['uri'] = flask.url_for('checklists.info', user_id=user_id, group_id=group_id, checklist_id=checklist_id, _external=True)
-    info['id'] = checklist_id
     info['group'] = checklist.group.summary()
     info['group']['uri'] = flask.url_for('groups.info', user_id=user_id, group_id=group_id, _external=True)
     info['user'] = checklist.group.user.summary()
@@ -45,7 +48,7 @@ def single_checklist(user_id, group_id, checklist_id):
 
 
 def update_checklist(user_id, group_id, checklist_id):
-    checklist = model.search_checklist(user_id, group_id, checklist_id)
+    checklist = model.search_checklist(checklist_id)
     if checklist is None:
         flask.abort(404, 'Checklist not found')
     new_info = flask.request.json
@@ -59,7 +62,7 @@ def update_checklist(user_id, group_id, checklist_id):
 
 
 def delete_checklist(user_id, group_id, checklist_id):
-    checklist = model.search_checklist(user_id, group_id, checklist_id)
+    checklist = model.search_checklist(checklist_id)
     if checklist is None:
         flask.abort(404, 'Checklist not found')
     if checklist.delete():
