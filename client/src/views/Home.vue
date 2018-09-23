@@ -144,7 +144,10 @@ export default {
       this.$router.push({ path: 'login' })
     }
 
-    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username: token, password: ''})
+    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username: token, password: ''}, () => {
+      this.$emit('showError', 'Authentication error. Session expired?')
+      this.$router.push({ name: 'login' })
+    })
     this.loadUser(useruri)
   },
 
@@ -174,12 +177,7 @@ export default {
           this.groups = response.data.groups
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 
@@ -228,12 +226,7 @@ export default {
           this.groups.push(response.data)
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
       this.newGroupName = ''
     },

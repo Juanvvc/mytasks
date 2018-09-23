@@ -2,7 +2,4 @@
 server/.venv
 __pycache__
 *.swp
-server/data
-server/data-test
-server/data.zip
 server/tmp
