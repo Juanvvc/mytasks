@@ -99,6 +99,7 @@
         :available-groups="groups"
         @newItem="newItem"
         @checkItem="checkItem"
+        @editItem="editItem"
         @clearChecklist="clearChecklist"
         @deleteChecklist="deleteChecklist"
         @changeMetadata="changeMetadata"
@@ -335,6 +336,25 @@ export default {
         items: this.activeChecklist.items
       }
       newChecklistData.items[index].checked = !newChecklistData.items[index].checked
+      this.updateChecklist(this.activeChecklist._id, newChecklistData)
+    },
+
+    editItem(index, result) {
+      if(this.activeGroup === null || this.activeChecklist === null) {
+        this.$emit('showError', 'No active checklist to check item')
+      }
+      var newChecklistData = {
+        items: this.activeChecklist.items
+      }
+      if(result.name === '') {
+        // if the name is empty, remove the item
+        newChecklistData.items.splice(index, 1)
+      } else {
+        // else, edit the item
+        for(let key in result) {
+            newChecklistData.items[index][key] = result[key]
+        }
+      }
       this.updateChecklist(this.activeChecklist._id, newChecklistData)
     },
 

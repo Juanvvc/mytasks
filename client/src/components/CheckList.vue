@@ -30,29 +30,37 @@
           <v-list-tile
             v-for="(item, index) in checklist.items"
             :key="item.name"
+            avatar
             class="pointable">
-            <v-list-tile-action @click="checkItem(index)">
+            <v-list-tile-avatar @click="checkItem(index)">
               <v-icon v-if="item.checked">check_box</v-icon>
               <v-icon v-else>check_box_outline_blank</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-title>
-              <span v-if="item.checked" class="checked">{{ item.name }}</span>
-              <span v-else class="unchecked">{{ item.name }}</span>
-            </v-list-tile-title>
-          </v-list-tile>
-          <v-list-tile>
-            <v-list-tile-action>
-              <v-icon>check_box_outline_blank</v-icon>
-            </v-list-tile-action>
+            </v-list-tile-avatar>
             <v-list-tile-content>
-              <v-text-field
-                v-model="newItemName"
-                placeholder="Text"
-                @keyup.enter="newItem"
-                @keyup.escape="newItemName = ''"
-                @blur="newItemName = ''"
-                full-width
-                ></v-text-field>
+              <v-list-tile-title>
+                <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
+                <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
+              </v-list-tile-title>
+              <v-list-tile-sub-title>
+                <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
+                <span v-if="item.comment">{{item.comment}}</span>
+              </v-list-tile-sub-title>
+            </v-list-tile-content>
+          </v-list-tile>
+          <v-list-tile avatar>
+            <v-list-tile-avatar>
+              <v-icon>check_box_outline_blank</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>
+                <v-text-field
+                  v-model="newItemName"
+                  placeholder="New item"
+                  @keyup.enter="newItem"
+                  @keyup.escape="newItemName = ''"
+                  @blur="newItemName = ''"
+                  full-width />
+              </v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
         </v-list>
@@ -89,11 +97,20 @@
         </v-card>
       </div>
     </v-flex>
+
+    <item-dialog ref="editDialog"/>
   </v-layout>
 </template>
 
 <script>
+
+import ItemDialog from '@/components/ItemDialog.vue'
+
 export default {
+  components: {
+    ItemDialog
+  },
+
   props: {
     checklist: {
       type: Object,
@@ -108,9 +125,11 @@ export default {
       mandatory: true
     }
   },
+
   data: () => ({
     newItemName: ''
   }),
+
   methods: {
     newItem () {
       this.$emit('newItem', this.newItemName)
@@ -119,6 +138,19 @@ export default {
 
     checkItem (itemIndex) {
       this.$emit('checkItem', itemIndex)
+    },
+
+    editItem (itemIndex) {
+      let item = this.checklist.items[itemIndex]
+      this.$refs.editDialog.show({
+        name: item.name,
+        comment: item.comment,
+        due_date: item.due_date,
+      }).then(result => {
+        if(result !== null) {
+          this.$emit('editItem', itemIndex, result)
+        }
+      })
     }
   }
 }
