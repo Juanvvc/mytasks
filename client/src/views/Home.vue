@@ -11,8 +11,8 @@
         <v-list-group
           v-for="group in groups"
           v-model="group.active"
-          :key="group.id"
-          @click="loadGroup(group.id)"
+          :key="group._id"
+          @click="loadGroup(group._id)"
           prepend-icon="view_agenda">
           <!-- group name -->
           <v-list-tile slot="activator">
@@ -20,13 +20,13 @@
               <v-list-tile-title>{{group.name}}</v-list-tile-title>
             </v-list-tile-content>
             <!-- add checklists or delete the group. if it is the active group -->
-            <v-list-tile-action v-if="isGroupActive(group.id)">
+            <v-list-tile-action v-if="isGroupActive(group._id)">
               <v-flex xs12>
                 <v-tooltip bottom>
                   <v-btn
                     flat icon color="primary"
                     slot="activator"
-                    @click.stop="newChecklist(group.id, 'New checklist')">
+                    @click.stop="newChecklist(group._id, 'New checklist')">
                     <v-icon>add</v-icon>
                   </v-btn>
                   <span>Add a new checklist to the group</span>
@@ -37,7 +37,7 @@
                     flat icon color="error"
                     slot="activator"
                     :disabled="group.checklists !== undefined && group.checklists.length != 0"
-                    @click.stop="deleteGroup(group.id)">
+                    @click.stop="deleteGroup(group._id)">
                     <v-icon>delete</v-icon>
                   </v-btn>
                   <span>If empty, delete the group</span>
@@ -47,13 +47,13 @@
           </v-list-tile>
           <!-- List of checklist in group -->
           <v-list-tile
-            v-if="isGroupActive(group.id)"
+            v-if="isGroupActive(group._id)"
             v-for="checklist in group.checklists"
-            :key="checklist.id"
+            :key="checklist._id"
           >
             <v-list-tile-content>
               <v-list-tile-title
-                @click="loadChecklist(group.id, checklist.id)"
+                @click="loadChecklist(group._id, checklist._id)"
                 class="pointable">
                 {{checklist.name}}
               </v-list-tile-title>
@@ -104,7 +104,7 @@
         @changeMetadata="changeMetadata"
         @changeChecklistGroup="changeChecklistGroup"
         @duplicateChecklist="duplicateChecklist"
-        @newChecklist="newChecklist(activeGroup.id, 'New checklist')"
+        @newChecklist="newChecklist(activeGroup._id, 'New checklist')"
         />
     </v-content>
 
@@ -137,21 +137,20 @@ export default {
 
   mounted () {
     // get the login information. If not logged, show the login dialog
-    var username = sessionStorage.getItem('username')
-    var password = sessionStorage.getItem('password')
-    var userid = sessionStorage.getItem('userid')
+    var token = sessionStorage.getItem('token')
+    var useruri = sessionStorage.getItem('useruri')
 
-    if(username === undefined || username === null) {
+    if(token === undefined || token === null) {
       this.$router.push({ path: 'login' })
     }
 
-    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username, password})
-    this.loadUser(userid)
+    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username: token, password: ''})
+    this.loadUser(useruri)
   },
 
   methods: {
     isGroupActive(groupId) {
-      return this.activeGroup !== null && this.activeGroup.id === groupId
+      return this.activeGroup !== null && this.activeGroup._id === groupId
     },
 
     getGroupById(groupId) {
@@ -159,23 +158,28 @@ export default {
         return null
       }
       for(let i=0; i<this.groups.length; i++) {
-        if(this.groups[i].id === groupId) {
+        if(this.groups[i]._id === groupId) {
           return this.groups[i]
         }
       }
       return null
     },
 
-    loadUser(userId) {
-      this.mytasks.get(`${userId}`).then(response => {
+    loadUser(useruri) {
+      this.mytasks.get(useruri).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
           this.activeUser = response.data
           this.groups = response.data.groups
         }
-      }).catch(() => {
-        this.$emit('showError', 'Cannot connect to the server')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 
@@ -183,12 +187,12 @@ export default {
       /* get data about a group from the server, and set it as active.
 
       If a checklistIf is passed, load also the chccklist */
-      this.mytasks.get(`${this.activeUser.id}/groups/${groupId}`).then( response => {
+      this.mytasks.get(`/groups/${groupId}`).then( response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
           for(var i=0; i<this.groups.length; i++) {
-            if(this.groups[i].id === groupId) {
+            if(this.groups[i]._id === groupId) {
               this.$set(this.groups, i, response.data)
               this.groups[i].active = true
               this.activeGroup = this.groups[i]
@@ -202,11 +206,18 @@ export default {
             }
           }
         }
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 
     newGroup(name) {
-      this.mytasks.post(`${this.activeUser.id}/groups/`, {
+      this.mytasks.post('/groups/', {
         name: name,
         description: '',
         checklists: []
@@ -216,14 +227,19 @@ export default {
         } else {
           this.groups.push(response.data)
         }
-      }).catch( () => {
-        this.$emit('showError', 'Error connecting to server')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
       this.newGroupName = ''
     },
 
     deleteGroup(groupId) {
-      if(this.activeGroup !== null && this.activeGroup.id === groupId) {
+      if(this.activeGroup !== null && this.activeGroup._id === groupId) {
         this.activeGroup = null
         this.activeChecklist = null
       }
@@ -236,7 +252,7 @@ export default {
           if(response.data.error_message !== undefined) {
             this.$emit('showError', response.data.error_message)
           } else {
-            this.loadUser(this.activeUser.id)
+            this.loadUser(`/users/${this.activeUser._id}`)
           }
         })
       })
@@ -244,7 +260,7 @@ export default {
 
     loadChecklist (groupId, checklistId) {
       /* Set a group and a checklist as active. */
-      this.mytasks.get(`${this.activeUser.id}/groups/${groupId}/checklists/${checklistId}`).then(response => {
+      this.mytasks.get(`/checklists/${checklistId}`).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
@@ -263,9 +279,10 @@ export default {
         this.$emit('showError', 'Cannot find group ' + groupId)
         return
       }
-      this.mytasks.post(`${group.uri}/checklists/`, {
+      this.mytasks.post(`/checklists/`, {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
+        groupid: groupId,
         items: []
       }).then(response => {
         if(response.data.error_message !== undefined) {
@@ -279,20 +296,30 @@ export default {
           this.activeGroup = group
           this.activeChecklist = response.data
         }
-      }).catch( () => {
-        this.$emit('showError', 'Network error')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 
-    updateChecklist(userId, groupId, checklistId, newData) {
-      this.mytasks.post(`${this.activeUser.id}/groups/${groupId}/checklists/${checklistId}`, newData).then(response => {
+    updateChecklist(checklistId, newData) {
+      this.mytasks.post(`/checklists/${checklistId}`, newData).then(response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
           this.activeChecklist = response.data
         }
-      }).catch( () => {
-        this.$emit('showError', 'Network error')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 
@@ -304,7 +331,7 @@ export default {
         items: (this.activeChecklist.items===undefined?[]:this.activeChecklist.items),
       }
       newChecklistData.items.push({name: name, checked: false})
-      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+      this.updateChecklist(this.activeChecklist._id, newChecklistData)
     },
 
     checkItem(index) {
@@ -315,7 +342,7 @@ export default {
         items: this.activeChecklist.items
       }
       newChecklistData.items[index].checked = !newChecklistData.items[index].checked
-      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+      this.updateChecklist(this.activeChecklist._id, newChecklistData)
     },
 
     clearChecklist() {
@@ -335,12 +362,12 @@ export default {
         var newChecklistData = {
           items: newItems
         }
-        this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, newChecklistData)
+        this.updateChecklist(this.activeChecklist._id, newChecklistData)
       })
     },
 
     changeMetadata(metadata) {
-      this.updateChecklist(this.activeUser.id, this.activeGroup.id, this.activeChecklist.id, metadata)
+      this.updateChecklist(this.activeChecklist._id, metadata)
     },
 
     deleteChecklist() {
@@ -355,7 +382,14 @@ export default {
           if(response.data.error_message !== undefined) {
             this.$emit('showError', response.data.error_message)
           } else {
-            this.loadGroup(this.activeGroup.id)
+            this.loadGroup(this.activeGroup._id)
+          }
+        }).catch( error => {
+          if(error.response && error.response.status === 401) {
+            this.$emit('showError', 'Unauthorized (maybe session expired?)')
+            this.$router.push({ name: 'login' })
+          } else {
+            this.$emit('showError', error)
           }
         })
       })
@@ -366,18 +400,14 @@ export default {
       if(fromGroupId === toGroupId || this.activeChecklist === null) {
         return
       }
-      var toGroup = this.getGroupById(toGroupId)
-      if(toGroup === null) {
-        this.$emit('showError', 'Cannot find group ' + toGroupId)
-        return
-      }
       var newData = {
         name: this.activeChecklist.name,
         description: this.activeChecklist.description,
+        groupid: toGroupId,
         items: this.activeChecklist.items
       }
       // create a new checklist in toGroup with this data
-      this.mytasks.post(`${toGroup.uri}/checklists/`, newData).then( response => {
+      this.mytasks.post(`/checklists/`, newData).then( response => {
         if(response.data.errorMessage !== undefined) {
           this.$emit('showError', response.data.errorMessage)
         } else {
@@ -388,10 +418,15 @@ export default {
             }
           })
           // load the group and checklist
-          this.loadGroup(toGroupId, response.data.id)
+          this.loadGroup(toGroupId, response.data._id)
         }
-      }).catch( () => {
-        this.$emit('showError', 'Network error')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 
@@ -405,17 +440,23 @@ export default {
       var newData = {
         name: this.activeChecklist.name,
         description: this.activeChecklist.description,
-        items: this.activeChecklist.items
+        items: this.activeChecklist.items,
+        groupid: this.activeGroup._id
       }
-      this.mytasks.post(`${this.activeGroup.uri}/checklists/`, newData).then( response => {
+      this.mytasks.post('/checklists/', newData).then( response => {
         if(response.data.errorMessage !== undefined) {
           this.$emit('showError', response.data.errorMessage)
         } else {
           // load the group and the new checklist
-          this.loadGroup(this.activeGroup.id, response.data.id)
+          this.loadGroup(this.activeGroup._id, response.data._id)
         }
-      }).catch( () => {
-        this.$emit('showError', 'Network error')
+      }).catch( error => {
+        if(error.response && error.response.status === 401) {
+          this.$emit('showError', 'Unauthorized (maybe session expired?)')
+          this.$router.push({ name: 'login' })
+        } else {
+          this.$emit('showError', error)
+        }
       })
     },
 

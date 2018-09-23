@@ -36,7 +36,9 @@ class TestUsersView(flask_testing.TestCase):
 
     def test_availableusers(self):
         with self.client:
-            response = self.client.get('/', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
+            url = flask.url_for('users.available')
+
+            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertFalse('error_message' in data)
             self.assertTrue(type(data) == list)
@@ -45,10 +47,14 @@ class TestUsersView(flask_testing.TestCase):
 
     def test_oneuser(self):
         with self.client:
-            response = self.client.get('/{}'.format(self.user.id()), headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
+            url = flask.url_for('users.info', user_id=str(self.user.id()))
+            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertFalse('error_message' in data)
-            self.assertTrue('name' in data and data['name'] == 'USER1')
+            self.assertTrue('name' in data)
+            self.assertEqual(data['name'], 'USER1')
+            self.assertFalse(project.model.PASSWORD_FIELDNAME in data)
+            self.assertFalse('token' in data)
 
 
 if __name__ == '__main__':

@@ -1,18 +1,24 @@
 import flask
 import project.model as model
+import project.server.auth
 
 
 def get_blueprint(auth=None):
     blueprint = flask.Blueprint('users', __name__)
-    blueprint.add_url_rule('/', view_func=auth.login_required(users), methods=['GET'], endpoint='available')
-    blueprint.add_url_rule('/<user_id>', view_func=auth.login_required(single_user), methods=['GET'], endpoint='info')
-    blueprint.add_url_rule('/login', view_func=auth.login_required(users), methods=['GET'], endpoint='login')
+    blueprint.add_url_rule('/users/', view_func=auth.login_required(users), methods=['GET'], endpoint='available')
+    blueprint.add_url_rule('/users/<user_id>', view_func=auth.login_required(single_user), methods=['GET'], endpoint='info')
+    blueprint.add_url_rule('/login', view_func=auth.login_required(login), methods=['GET'], endpoint='login')
 
     return blueprint
 
 
 def login():
-    return single_user(flask.g.user_id)
+    info = dict()
+    info['token'] = project.server.auth.encode_auth_token(flask.g.user_id).decode()
+    info['_id'] = str(flask.g.user_id)
+    info['uri'] = flask.url_for('users.info', user_id=str(flask.g.user_id), _external=True)
+    info['status'] = 200
+    return flask.jsonify(info)
 
 
 def users():
@@ -31,11 +37,11 @@ def single_user(user_id):
         flask.abort(404)
     info = user.summary()
     groups_info = list()
-    for g in model.available_groups(user_id):
+    only_public = (str(user_id) != flask.g.user_id)
+    for g in model.available_groups(user_id, only_public=only_public):
         group_info = g.copy()
         group_info['_id'] = str(g['_id'])
-        group_info['userid'] = str(g['_id'])
-        group_info['uri'] = flask.url_for('groups.info', user_id=user_id, group_id=group_info['_id'], _external=True)
+        group_info['uri'] = flask.url_for('groups.info', group_id=group_info['_id'], _external=True)
         groups_info.append(group_info)
     info['groups'] = groups_info
     info['uri'] = flask.url_for('users.info', user_id=user_id, _external=True)

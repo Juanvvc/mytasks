@@ -15,12 +15,14 @@ class TestModel(unittest.TestCase):
     def setUp(self):
         # create a user 0
         self.user0 = model.db.users.insert({'name': 'NAME0'})
-        self.group0 = model.db.groups.insert({'name': 'GROUP0', 'userid': self.user0})
+        self.group0 = model.db.groups.insert({'name': 'GROUP0', 'userid': self.user0, 'private': True})
         self.checklist0 = model.db.checklists.insert({'name': 'CHECKLIST0', 'userid': self.user0, 'groupid': self.group0})
-        self.group1 = model.db.groups.insert({'name': 'GROUP1', 'userid': self.user0})
+        self.group1 = model.db.groups.insert({'name': 'GROUP1', 'userid': self.user0, 'private': False})
+        self.checklist1 = model.db.checklists.insert({'name': 'CHECKLIST0', 'userid': self.user0, 'groupid': self.group1})
 
         # create user 1
         self.user1 = model.db.users.insert({'name': 'NAME1'})
+        self.group11 = model.db.groups.insert({'name': 'GROUP1', 'userid': self.user1})
 
     def tearDown(self):
         model.db.command('dropDatabase')
@@ -78,7 +80,8 @@ class TestModel(unittest.TestCase):
         self.assertEqual(new_user.info['name'], 'John')
 
     def test_groups_0(self):
-        " Test user 0 has 2 groups "
+        " Test groups in user0 "
+        # check the number of groups
         self.assertEqual(cursor_size(model.available_groups(self.user0)), 2)
 
     def test_groups_123(self):
@@ -89,12 +92,19 @@ class TestModel(unittest.TestCase):
         " Test groups can be created."
         # User 2 has no groups. A new group will be created as 0.
         user = model.User(self.user1)
-        group = user.create_group({'name': 'NEW_GROUP'})
+        group = user.create_group({'name': 'NEW_GROUP', 'userid': 'XXX'})
 
         group_new = model.search_group(group.id())
         self.assertEqual(type(group_new), model.Group)
         self.assertTrue('name' in group_new.info)
         self.assertTrue(group_new.info.get('name', None) == 'NEW_GROUP')
+
+        # check private is the dedault option
+        self.assertTrue('private' in group_new.info)
+        self.assertTrue(group_new.info['private'])
+
+        # finaly, assert the new group has the right userid and not XXX
+        self.assertEqual(group_new.user.id(), self.user1)
 
     def test_group_edit(self):
         " Change the name of a group "
@@ -114,19 +124,36 @@ class TestModel(unittest.TestCase):
 
     def test_group_delete2(self):
         " Test delete an empty group "
-        group = model.search_group(self.group1)
+        group = model.search_group(self.group11)
         self.assertFalse(group is None)
         self.assertTrue(group.delete())
-        self.assertTrue(model.search_group(self.group1) is None)
+        self.assertTrue(model.search_group(self.group11) is None)
 
     def test_checklist_create(self):
         """ Test checklists can be created.  """
         group = model.search_group(self.group0)
         self.assertFalse(group is None)
-        checklist = group.create_checklist({'name': 'CK'})
+        checklist = group.create_checklist({'name': 'CK', 'userid': 'XXX', 'groupid': 'XXX'})
         self.assertEqual(type(checklist), model.Checklist)
         self.assertTrue('name' in checklist.info)
         self.assertTrue(checklist.info.get('name', None) == 'CK')
+
+        # finaly, assert the new checklist has the right groupid and not XXX
+        self.assertEqual(checklist.info.get('groupid', ''), self.group0)
+
+    def test_checklists_permissions(self):
+        """ Test permissions """
+
+        # user1 cannot view or edit a checklist in a private group
+        checklist = model.search_checklist(self.checklist0)
+        self.assertFalse(checklist.visible_by(self.user1))
+        self.assertFalse(checklist.editable_by(self.user1))
+
+        # user1 can view but not edit a checklist ina public group
+        checklist = model.search_checklist(self.checklist1)
+        self.assertFalse(checklist.group.info.get('private', False))
+        self.assertTrue(checklist.visible_by(self.user1))
+        self.assertFalse(checklist.editable_by(self.user1))
 
     def test_checklists_edit(self):
         " Change the name of a checklist "

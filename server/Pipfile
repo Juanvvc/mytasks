@@ -7,13 +7,12 @@ name = "pypi"
 Flask = "*"
 Flask-Cors = "*"
 Flask-HTTPAuth = "*"
-Flask-Bcrypt = "*"
 coverage = "*"
-jwt = "*"
 Flask-Testing = "*"
 bcrypt = "*"
 Flask-Auth = "*"
 pymongo = "*"
+pyjwt = "*"
 
 [dev-packages]
 

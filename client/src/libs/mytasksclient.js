@@ -11,8 +11,8 @@ export default class {
             console.log(`GET ${url}`)
             return axios.get(url, {auth: this.auth})
         } else {
-            console.log(`GET ${this.baseurl}/${url}`)
-            return axios.get(`${this.baseurl}/${url}`, {auth: this.auth})
+            console.log(`GET ${this.baseurl}${url}`)
+            return axios.get(`${this.baseurl}${url}`, {auth: this.auth})
         }
     }
 
@@ -21,8 +21,8 @@ export default class {
             console.log(`POST ${url}`)
             return axios.post(url, data, {auth: this.auth})
         } else {
-            console.log(`POST ${this.baseurl}/${url}`)
-            return axios.post(`${this.baseurl}/${url}`, data, {auth: this.auth})
+            console.log(`POST ${this.baseurl}${url}`)
+            return axios.post(`${this.baseurl}${url}`, data, {auth: this.auth})
         }
     }
 
@@ -31,8 +31,8 @@ export default class {
             console.log(`DELETE ${url}`)
             return axios.delete(url, {auth: this.auth})
         } else {
-            console.log(`DELETE ${this.baseurl}/${url}`)
-            return axios.delete(`${this.baseurl}/${url}`, {auth: this.auth})
+            console.log(`DELETE ${this.baseurl}${url}`)
+            return axios.delete(`${this.baseurl}${url}`, {auth: this.auth})
         }
     }
 

@@ -64,6 +64,32 @@ def test():
 
 
 @app.cli.command()
+def test_model():
+    """Runs the unit tests, only for models"""
+    app.config.from_object('project.server.config.TestingConfig')
+    project.model.configure_model(app)
+
+    tests = unittest.TestLoader().discover('project/tests', pattern='test_model*.py')
+    result = unittest.TextTestRunner(verbosity=2).run(tests)
+    if result.wasSuccessful():
+        return 0
+    return 1
+
+
+@app.cli.command()
+def test_views():
+    """Runs the unit tests , only for views """
+    app.config.from_object('project.server.config.TestingConfig')
+    project.model.configure_model(app)
+
+    tests = unittest.TestLoader().discover('project/tests', pattern='test_views*.py')
+    result = unittest.TextTestRunner(verbosity=2).run(tests)
+    if result.wasSuccessful():
+        return 0
+    return 1
+
+
+@app.cli.command()
 def cov():
     """Runs the unit tests with coverage."""
     import coverage

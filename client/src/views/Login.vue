@@ -27,6 +27,7 @@
                 :append-icon="showPassword ? 'visibility_off' : 'visibility'"
                 :rules="[rules.required]"
                 counter
+                @keyup.enter="login"
                 @click:append="showPassword = !showPassword" />
             </v-layout>
             <v-layout align-center justify-center>
@@ -68,13 +69,13 @@ export default {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
-          sessionStorage.setItem('username', this.username)
-          sessionStorage.setItem('password', this.password)
-          sessionStorage.setItem('userid', response.data._id)
+          sessionStorage.setItem('token', response.data.token)
+          sessionStorage.setItem('useruri', response.data.uri)
           this.$router.push({ name: 'home' })
         }
+      }).catch( () => {
+        this.$emit('showError', 'Cannot login to MyTasks')
       })
-
     }
   }
 }

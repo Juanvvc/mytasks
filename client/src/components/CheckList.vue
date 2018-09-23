@@ -16,11 +16,11 @@
             <v-select
               label="In group"
               placeholder="GROUP"
-              v-model="checklist.group.id"
+              v-model="checklist.groupid"
               :items="availableGroups"
               item-text="name"
-              item-value="id"
-              @change="$emit('changeChecklistGroup', group.id, checklist.group.id)"
+              item-value="_id"
+              @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
               >
             </v-select>
           </v-flex>
@@ -75,7 +75,8 @@
       <div v-else>
         <v-card>
           <v-toolbar color="secondary">
-            <v-toolbar-title>No checklist selected in group "{{ group.name }}"</v-toolbar-title>
+            <v-toolbar-title v-if="group !== null">No checklist selected in group "{{ group.name }}"</v-toolbar-title>
+            <v-toolbar-title v-else>No group or checklist selected</v-toolbar-title>
           </v-toolbar>
 
 
