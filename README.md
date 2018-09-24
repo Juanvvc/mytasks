@@ -18,6 +18,34 @@ cd server
 ./mytasks.sh
 ```
 
+### Configuration
+
+Create a file named `server/config.py`. This file is local, it might include
+usernames, secrets and passwords and SHOULDN'T be added to git. Example:
+
+```
+import project.server.config
+
+class MytasksConfig(project.server.config.DevelopmentConfig):
+    MONGOURL = 'mongodb://USER:PASSWORD@localhost:27017/?authSource=admin'
+    # generate with: python3 -c 'import os; print(os.urandom(32))'
+    SECRET_KEY = b'?\xbf,\xb4\x8d\xa3"<\x9c\xb0@\x0f5\xab,w\xee\x8d$0\x13\x8b83'
+```
+
+### Unittesting the application
+
+Unit tests must use a testing database. You can run a MongoDB server without
+autentication on an empty directory:
+
+```
+mkdir -p dbtest
+mongod --dbpath dbtest
+rm -rf dbtest
+
+cd server
+./mytasks.sh test
+```
+
 ### Additional management commands in the server
 
 - `./mytasks.sh test`: run tests on the server

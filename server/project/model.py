@@ -9,10 +9,10 @@ from bson.errors import InvalidId
 
 logger = logging.getLogger(__name__)
 PASSWORD_FIELDNAME = 'password_hash'
-# The Flask app must change this to the real path
 
-client = pymongo.MongoClient('mongodb://localhost:27017/')
-db = client.mytasks
+# The Flask app must change this to the real path
+client = None
+db = None
 
 
 def configure_model(app):
@@ -22,7 +22,7 @@ def configure_model(app):
         :app (Flask): The Flask application to read the configuration from
     """
     global logger, client, db
-    client = pymongo.MongoClient(app.config.get('MONGOURL', 'mongodb://localhost:27017/'))
+    client = pymongo.MongoClient(app.config.get('MONGOURL'))
     db = client[app.config.get('MONGODB', 'mytasks')]
     logger = app.logger
 

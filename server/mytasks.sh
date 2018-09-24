@@ -30,15 +30,21 @@ fi
 if [ -z "$1" ]; then
     (
         cd $MYTASKSHOME
-        export APP_SETTINGS="project.server.config.DevelopmentConfig"
+        export FLASK_ENV="depelopment"
         export FLASK_APP="manage"
+        export FLASK_DEBUG=True
+        if [ -e config.py ]; then
+            export APP_SETTINGS="config.MytasksConfig"
+        fi
         .venv/bin/flask run
     )
 else
     (
         cd $MYTASKSHOME
-        export APP_SETTINGS="project.server.config.DevelopmentConfig"
         export FLASK_APP="manage"
+        if [ -e config.py ]; then
+            export APP_SETTINGS="config.MytasksConfig"
+        fi
         .venv/bin/flask "$@"
     )
 fi
