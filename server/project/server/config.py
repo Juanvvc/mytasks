@@ -9,7 +9,6 @@ class BaseConfig(object):
     SECRET_KEY = os.getenv('SECRET_KEY', 'my_precious')
     DEBUG = False
     BCRYPT_LOG_ROUNDS = 13
-    BASE_URL_API = '/mytasks/api/v1.0'
     # for authentication
     # MONGOURL='mongodb://user:password@localhost:27017/?authSource=the_database&authMechanism=SCRAM-SHA-256'
     MONGOURL = os.getenv('MONGOURL', 'mongodb://localhost:27017/')

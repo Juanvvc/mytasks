@@ -33,7 +33,7 @@ if [ -z "$1" ]; then
         if [ -e "config.py" ]; then
             export APP_SETTINGS="config.MytasksConfig"
         fi
-        .venv/bin/gunicorn -w 4 manage:app
+        .venv/bin/gunicorn -w 4 -b 127.0.0.1:5000 manage:app
     )
 else
     (
