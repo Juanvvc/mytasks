@@ -17,19 +17,11 @@ project.model.configure_model(app)
 project.views.register(app)
 
 
-@app.errorhandler(400)
-@app.errorhandler(404)
-@app.errorhandler(401)
-@app.errorhandler(500)
-def error_handler(error):
-    return flask.make_response(flask.jsonify({'error_message': str(error), 'status': error.code}))
-
-
 @app.cli.command()
 @click.argument('username')
 @click.argument('password')
 def passwd(username, password):
-    app.config.from_object('project.server.config.DevelopmentConfig')
+    " Change the password for a user "
     project.model.configure_model(app)
 
     import project.model as model
@@ -46,6 +38,7 @@ def passwd(username, password):
 @click.argument('username')
 @click.argument('password')
 def useradd(username, password):
+    " Add a user to the model "
     import project.model as model
     model.create_user(username, password)
 

@@ -119,8 +119,6 @@ import CheckList from '@/components/CheckList.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MyTasksClient from '@/libs/mytasksclient.js'
 
-var MYTASKS_SERVER = 'http://127.0.0.1:5000' ///mytasks/api/v1.0'
-
 export default {
   name: 'home',
   components: {
@@ -145,7 +143,7 @@ export default {
       this.$router.push({ path: 'login' })
     }
 
-    this.mytasks = new MyTasksClient(MYTASKS_SERVER,  {username: token, password: ''}, () => {
+    this.mytasks = new MyTasksClient({username: token, password: ''}, () => {
       this.$emit('showError', 'Authentication error. Session expired?')
       this.$router.push({ name: 'login' })
     })

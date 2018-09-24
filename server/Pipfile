@@ -13,6 +13,7 @@ bcrypt = "*"
 Flask-Auth = "*"
 pymongo = "*"
 pyjwt = "*"
+gunicorn = "*"
 
 [dev-packages]
 

@@ -48,8 +48,6 @@
 
 import MyTasksClient from '@/libs/mytasksclient.js'
 
-var MYTASKS_SERVER = 'http://127.0.0.1:5000' ///mytasks/api/v1.0'
-
 export default {
   name: 'home',
 
@@ -64,7 +62,7 @@ export default {
 
   methods: {
     login() {
-      var mytasks = new MyTasksClient(MYTASKS_SERVER)
+      var mytasks = new MyTasksClient()
       mytasks.login({username: this.username, password: this.password}).then( response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)

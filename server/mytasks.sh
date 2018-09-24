@@ -30,13 +30,10 @@ fi
 if [ -z "$1" ]; then
     (
         cd $MYTASKSHOME
-        export FLASK_ENV="depelopment"
-        export FLASK_APP="manage"
-        export FLASK_DEBUG=True
-        if [ -e config.py ]; then
+        if [ -e "config.py" ]; then
             export APP_SETTINGS="config.MytasksConfig"
         fi
-        .venv/bin/flask run
+        .venv/bin/gunicorn -w 4 manage:app
     )
 else
     (
