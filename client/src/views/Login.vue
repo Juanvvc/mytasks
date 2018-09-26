@@ -8,11 +8,21 @@
       <v-layout justify-center align-center wrap xs12 md10>
         <v-card>
           <!--  Title and toolbar !-->
-          <v-toolbar clipped-left color="secondary">
+          <!--v-toolbar clipped-left color="secondary">
               <v-toolbar-title>Login to MyTasks</v-toolbar-title>
-          </v-toolbar>
+          </v-toolbar-->
 
-          <v-container>
+          <v-img src="toolbar.jpg"  max-height="80px">
+            <v-container fill-height fluid>
+              <v-layout fill-height>
+                <v-flex xs12 align-end flexbox>
+                  <span class="white--text headline">Login to MyTasks</span>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </v-img>
+
+          <v-card-text>
             <v-layout column xs12 md6>
               <v-text-field
                 placeholder="Username"
@@ -37,7 +47,7 @@
                 Login
               </v-btn>
             </v-layout>
-          </v-container>
+          </v-card-text>
         </v-card>
       </v-layout>
     </v-content>

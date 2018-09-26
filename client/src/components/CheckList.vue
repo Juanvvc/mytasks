@@ -1,8 +1,75 @@
 <template>
   <v-layout row wrap>
+
     <v-flex xs12 sm10 offset-sm1>
-      <v-card v-if="checklist !== null">
-        <v-toolbar color="secondary">
+      <div v-if="checklist !== null">
+        <v-card >
+          <v-img src="toolbar.jpg"  max-height="80px">
+            <v-container fill-height fluid>
+              <v-layout fill-height>
+                <v-flex xs12 align-end flexbox>
+                  <span class="white--text headline">{{checklist.name}}</span>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </v-img>
+
+          <v-card-text>
+            <v-list>
+              <v-list-tile
+                v-for="(item, index) in checklist.items"
+                :key="item.name"
+                avatar
+                v-if="!item.checked || !hide_done"
+                class="pointable">
+                <v-list-tile-avatar @click="checkItem(index)">
+                  <v-icon v-if="item.checked">check_box</v-icon>
+                  <v-icon v-else>check_box_outline_blank</v-icon>
+                </v-list-tile-avatar>
+                <v-list-tile-content>
+                  <v-list-tile-title>
+                    <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
+                    <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
+                  </v-list-tile-title>
+                  <v-list-tile-sub-title>
+                    <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
+                    <span v-if="item.comment">{{item.comment}}</span>
+                  </v-list-tile-sub-title>
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-list-tile avatar>
+                <v-list-tile-avatar>
+                  <v-icon>check_box_outline_blank</v-icon>
+                </v-list-tile-avatar>
+                <v-list-tile-content>
+                  <v-list-tile-title>
+                    <v-text-field
+                      v-model="newItemName"
+                      placeholder="New item"
+                      @keyup.enter="newItem"
+                      @keyup.escape="newItemName = ''"
+                      @blur="newItemName = ''"
+                      full-width />
+                  </v-list-tile-title>
+                </v-list-tile-content>
+              </v-list-tile>
+            </v-list>
+          </v-card-text>
+          <v-card-actions>
+            <v-switch
+              v-model="hide_done"
+              label="Hide done items">
+            </v-switch>
+          </v-card-actions>
+        </v-card>
+
+        <br />
+
+        <v-card>
+          <v-card-title>
+            Management
+          </v-card-title>
+          <v-card-text>
             <v-flex xs12 sm6>
               <v-text-field
                 label="Name, only saved after pressing ENTER"
@@ -11,92 +78,54 @@
                 @keyup.enter="$emit('changeMetadata', {name: checklist.name})">
               </v-text-field>
             </v-flex>
-          <v-spacer />
-          <v-flex xs12 sm4>
-            <v-select
-              label="In group"
-              placeholder="GROUP"
-              v-model="checklist.groupid"
-              :items="availableGroups"
-              item-text="name"
-              item-value="_id"
-              @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
-              >
-            </v-select>
-          </v-flex>
-        </v-toolbar>
+            <v-flex xs12 sm4>
+              <v-select
+                label="In group"
+                placeholder="GROUP"
+                v-model="checklist.groupid"
+                :items="availableGroups"
+                item-text="name"
+                item-value="_id"
+                @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
+                >
+              </v-select>
+            </v-flex>
+          </v-card-text>
+          <v-card-actions>
+            <v-tooltip top>
+              <v-btn flat slot="activator" @click="$emit('duplicateChecklist')"><v-icon>file_copy</v-icon> Duplicate</v-btn>
+              <span>Duplicate the current checklist in the same group.</span>
+            </v-tooltip>
+            <v-tooltip top>
+              <v-btn flat slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
+              <span>Clear done items from the checklist</span>
+            </v-tooltip>
+            <v-tooltip top>
+              <v-btn flat slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
+              <span>Delete the checklist</span>
+            </v-tooltip>
+          </v-card-actions>
+        </v-card>
 
-        <v-list>
-          <v-list-tile
-            v-for="(item, index) in checklist.items"
-            :key="item.name"
-            avatar
-            class="pointable">
-            <v-list-tile-avatar @click="checkItem(index)">
-              <v-icon v-if="item.checked">check_box</v-icon>
-              <v-icon v-else>check_box_outline_blank</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
-                <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
-              </v-list-tile-title>
-              <v-list-tile-sub-title>
-                <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
-                <span v-if="item.comment">{{item.comment}}</span>
-              </v-list-tile-sub-title>
-            </v-list-tile-content>
-          </v-list-tile>
-          <v-list-tile avatar>
-            <v-list-tile-avatar>
-              <v-icon>check_box_outline_blank</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-content>
-              <v-list-tile-title>
-                <v-text-field
-                  v-model="newItemName"
-                  placeholder="New item"
-                  @keyup.enter="newItem"
-                  @keyup.escape="newItemName = ''"
-                  @blur="newItemName = ''"
-                  full-width />
-              </v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
-        </v-list>
 
-        <v-tooltip top>
-          <v-btn slot="activator" @click="$emit('duplicateChecklist')"><v-icon>file_copy</v-icon> Duplicate</v-btn>
-          <span>Duplicate the current checklist in the same group.</span>
-        </v-tooltip>
-        <v-tooltip top>
-          <v-btn slot="activator" color="warning" @click="$emit('clearChecklist')"><v-icon>clear_all</v-icon> Clear</v-btn>
-          <span>Clear done items from the checklist</span>
-        </v-tooltip>
-        <v-tooltip top>
-          <v-btn slot="activator" color="error" @click="$emit('deleteChecklist')"><v-icon>delete</v-icon> Delete</v-btn>
-          <span>Delete the checklist</span>
-        </v-tooltip>
-
-      </v-card>
-
+      </div>
       <div v-else>
         <v-card>
-          <v-toolbar color="secondary">
-            <v-toolbar-title v-if="group !== null">No checklist selected in group "{{ group.name }}"</v-toolbar-title>
-            <v-toolbar-title v-else>No group or checklist selected</v-toolbar-title>
-          </v-toolbar>
-
-
-          <v-btn
-            color="primary"
-            @click.stop="$emit('newChecklist')">
-            <v-icon>add</v-icon> Add new checklist
-          </v-btn>
-
+          <v-img src="toolbar.jpg" max-height="80px">
+            <v-container fill-height fluid>
+              <v-layout>
+                <v-flex xs12 align-end flexbox>
+                  <span class="white--text headline" v-if="group !== null">No checklist selected in group "{{ group.name }}"</span>
+                  <span class="white--text headline" v-else>No group or checklist selected</span>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </v-img>
         </v-card>
       </div>
     </v-flex>
+
+
 
     <item-dialog ref="editDialog"/>
   </v-layout>
@@ -127,7 +156,8 @@ export default {
   },
 
   data: () => ({
-    newItemName: ''
+    newItemName: '',
+    hide_done: false
   }),
 
   methods: {
