@@ -12,6 +12,9 @@ def create_auth():
 
     @auth.verify_password
     def verify_password(username, password):
+        if not username:
+            flask.current_app.logger.warning('No username')
+            return False
         if not password:
             # no password: assume there is a token in the username
             flask.current_app.logger.info('Verifying token')

@@ -2,8 +2,8 @@
 #
 # WSGIDaemonProcess localhost processes=2 threads=15 display-name=%{GROUP}
 # WSGIProcessGroup localhost
+# WSGIPassAuthorization On
 # WSGIScriptAlias /hello /path/to/mytasks/root/mytasks.wsgi
-# WSGIScriptReloading On
 # <Directory /path/to/mytasks/root/apache>
 # <IfVersion < 2.4>
 #   Order allow,deny
@@ -26,5 +26,14 @@ with open(activate_this) as file_:
 import sys
 sys.path.insert(0, server_dir)
 
-# import application
-from manage import app as application
+# create application
+from flask_cors import CORS
+import flask
+import project.views
+
+application = flask.Flask(__name__)
+application.config.from_object('config.MytasksConfig')
+CORS(application)
+
+project.model.configure_model(application)
+project.views.register(application)
