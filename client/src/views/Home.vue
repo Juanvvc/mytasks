@@ -204,12 +204,7 @@ export default {
           }
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 
@@ -275,6 +270,8 @@ export default {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
         groupid: groupId,
+        hide_done_date: false,
+        hide_done_items: false,
         items: []
       }).then(response => {
         if(response.data.error_message !== undefined) {
@@ -289,12 +286,7 @@ export default {
           this.activeChecklist = response.data
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 
@@ -306,12 +298,7 @@ export default {
           this.activeChecklist = response.data
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 
@@ -334,6 +321,11 @@ export default {
         items: this.activeChecklist.items
       }
       newChecklistData.items[index].checked = !newChecklistData.items[index].checked
+      if(newChecklistData.items[index].checked) {
+        newChecklistData.items[index].done_date = (new Date()).toISOString().slice(0,10)
+      } else {
+        newChecklistData.items[index].done_date = ''
+      }
       this.updateChecklist(this.activeChecklist._id, newChecklistData)
     },
 
@@ -396,12 +388,7 @@ export default {
             this.loadGroup(this.activeGroup._id)
           }
         }).catch( error => {
-          if(error.response && error.response.status === 401) {
-            this.$emit('showError', 'Unauthorized (maybe session expired?)')
-            this.$router.push({ name: 'login' })
-          } else {
-            this.$emit('showError', error)
-          }
+          this.$emit('showError', error)
         })
       })
     },
@@ -432,12 +419,7 @@ export default {
           this.loadGroup(toGroupId, response.data._id)
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 
@@ -462,12 +444,7 @@ export default {
           this.loadGroup(this.activeGroup._id, response.data._id)
         }
       }).catch( error => {
-        if(error.response && error.response.status === 401) {
-          this.$emit('showError', 'Unauthorized (maybe session expired?)')
-          this.$router.push({ name: 'login' })
-        } else {
-          this.$emit('showError', error)
-        }
+        this.$emit('showError', error)
       })
     },
 

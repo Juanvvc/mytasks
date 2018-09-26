@@ -20,7 +20,7 @@
                 v-for="(item, index) in checklist.items"
                 :key="item.name"
                 avatar
-                v-if="!item.checked || !hide_done"
+                v-if="!item.checked || !checklist.hide_done_items"
                 class="pointable">
                 <v-list-tile-avatar @click="checkItem(index)">
                   <v-icon v-if="item.checked">check_box</v-icon>
@@ -32,6 +32,7 @@
                     <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
                   </v-list-tile-title>
                   <v-list-tile-sub-title>
+                    <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
                     <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
                     <span v-if="item.comment">{{item.comment}}</span>
                   </v-list-tile-sub-title>
@@ -56,10 +57,7 @@
             </v-list>
           </v-card-text>
           <v-card-actions>
-            <v-switch
-              v-model="hide_done"
-              label="Hide done items">
-            </v-switch>
+
           </v-card-actions>
         </v-card>
 
@@ -70,7 +68,7 @@
             Management
           </v-card-title>
           <v-card-text>
-            <v-flex xs12 sm6>
+            <v-flex xs12 md6>
               <v-text-field
                 label="Name, only saved after pressing ENTER"
                 placeholder="Name"
@@ -78,7 +76,7 @@
                 @keyup.enter="$emit('changeMetadata', {name: checklist.name})">
               </v-text-field>
             </v-flex>
-            <v-flex xs12 sm4>
+            <v-flex xs12 md6>
               <v-select
                 label="In group"
                 placeholder="GROUP"
@@ -90,6 +88,16 @@
                 >
               </v-select>
             </v-flex>
+            <v-switch
+              v-model="checklist.hide_done_items"
+              label="Hide done items"
+              @change="$emit('changeMetadata', {hide_done_items: checklist.hide_done_items})">>
+            </v-switch>
+            <v-switch
+              v-model="checklist.hide_done_date"
+              label="Hide completed on"
+              @change="$emit('changeMetadata', {hide_done_date: checklist.hide_done_date})">
+            </v-switch>
           </v-card-text>
           <v-card-actions>
             <v-tooltip top>
@@ -156,8 +164,7 @@ export default {
   },
 
   data: () => ({
-    newItemName: '',
-    hide_done: false
+    newItemName: ''
   }),
 
   methods: {
