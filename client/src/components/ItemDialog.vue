@@ -84,10 +84,12 @@ export default {
 
       if(result && this.resolve !== undefined) {
         this.resolve({
-          name: this.name,
-          comment: this.comment,
-          due_date: this.due_date
+          name: this.name.trim(),
+          comment: this.comment.trim(),
+          due_date: this.due_date.trim()
         })
+        this.name = ''
+        this.comment = ''
       }
     }
   }
