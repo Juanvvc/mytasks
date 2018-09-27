@@ -10,7 +10,7 @@
           {{ errorMessage }}
       </v-alert>
       <router-view @showError="showError"/>
-      <v-footer app fixed height="auto">
+      <v-footer app height="auto">
         <v-layout
           justify-center
           row

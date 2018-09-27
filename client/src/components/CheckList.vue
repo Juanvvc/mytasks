@@ -21,7 +21,7 @@
             <p v-else @dblclick="editDescription()"><b>No description</b></p>
 
             <v-list>
-              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()">
+              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle'}">
                 <!-- existing items -->
                 <v-list-tile
                   v-for="(item, index) in checklist.items"
@@ -33,7 +33,7 @@
                     <v-icon v-if="item.checked">check_box</v-icon>
                     <v-icon v-else>check_box_outline_blank</v-icon>
                   </v-list-tile-avatar>
-                  <v-list-tile-content>
+                  <v-list-tile-content class="handle">
                     <v-list-tile-title>
                       <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
                       <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
