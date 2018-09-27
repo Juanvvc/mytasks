@@ -1,6 +1,7 @@
 <template>
   <v-layout row wrap>
 
+
     <v-flex xs12 sm10 offset-sm1>
       <div v-if="checklist !== null">
         <v-card >
@@ -15,6 +16,10 @@
           </v-img>
 
           <v-card-text>
+            <v-textarea v-if="editing_description" label="Description" v-model="new_description" @keyup.enter="saveDescription()"></v-textarea>
+            <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
+            <p v-else @dblclick="editDescription()"><b>No description</b></p>
+
             <v-list>
               <v-list-tile
                 v-for="(item, index) in checklist.items"
@@ -164,7 +169,9 @@ export default {
   },
 
   data: () => ({
-    newItemName: ''
+    newItemName: '',
+    editing_description: false,
+    new_description: ''
   }),
 
   methods: {
@@ -188,6 +195,20 @@ export default {
           this.$emit('editItem', itemIndex, result)
         }
       })
+    },
+
+    editDescription () {
+      this.editing_description = true
+      if(this.checklist !== undefined && this.checklist.description !== undefined) {
+        this.new_description = this.checklist.description
+      } else {
+        this.new_description = ''
+      }
+    },
+
+    saveDescription () {
+      this.$emit('changeMetadata', {description: this.new_description.trim()})
+      this.editing_description = false
     }
   }
 }
