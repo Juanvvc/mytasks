@@ -58,4 +58,9 @@ export default {
   background-size: cover;
   background-color: #222;
 }
+
+.checklist-header {
+  background-image: url("assets/toolbar.jpg");
+  background-size: cover;
+}
 </style>
