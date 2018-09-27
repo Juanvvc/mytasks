@@ -21,44 +21,50 @@
             <p v-else @dblclick="editDescription()"><b>No description</b></p>
 
             <v-list>
-              <v-list-tile
-                v-for="(item, index) in checklist.items"
-                :key="item.name"
-                avatar
-                v-if="!item.checked || !checklist.hide_done_items"
-                class="pointable">
-                <v-list-tile-avatar @click="checkItem(index)">
-                  <v-icon v-if="item.checked">check_box</v-icon>
-                  <v-icon v-else>check_box_outline_blank</v-icon>
-                </v-list-tile-avatar>
-                <v-list-tile-content>
-                  <v-list-tile-title>
-                    <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
-                    <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
-                  </v-list-tile-title>
-                  <v-list-tile-sub-title>
-                    <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
-                    <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
-                    <span v-if="item.comment">{{item.comment}}</span>
-                  </v-list-tile-sub-title>
-                </v-list-tile-content>
-              </v-list-tile>
-              <v-list-tile avatar>
-                <v-list-tile-avatar>
-                  <v-icon>check_box_outline_blank</v-icon>
-                </v-list-tile-avatar>
-                <v-list-tile-content>
-                  <v-list-tile-title>
-                    <v-text-field
-                      v-model="newItemName"
-                      placeholder="New item"
-                      @keyup.enter="newItem"
-                      @keyup.escape="newItemName = ''"
-                      @blur="newItemName = ''"
-                      full-width />
-                  </v-list-tile-title>
-                </v-list-tile-content>
-              </v-list-tile>
+              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()">
+                <!-- existing items -->
+                <v-list-tile
+                  v-for="(item, index) in checklist.items"
+                  :key="item.name"
+                  avatar
+                  v-if="!item.checked || !checklist.hide_done_items"
+                  class="pointable">
+                  <v-list-tile-avatar @click="checkItem(index)">
+                    <v-icon v-if="item.checked">check_box</v-icon>
+                    <v-icon v-else>check_box_outline_blank</v-icon>
+                  </v-list-tile-avatar>
+                  <v-list-tile-content>
+                    <v-list-tile-title>
+                      <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
+                      <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
+                    </v-list-tile-title>
+                    <v-list-tile-sub-title>
+                      <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
+                      <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
+                      <span v-if="item.comment">{{item.comment}}</span>
+                    </v-list-tile-sub-title>
+                  </v-list-tile-content>
+                </v-list-tile>
+                <!-- Add a new item -->
+                <v-list-tile
+                  avatar
+                  slot="footer">
+                  <v-list-tile-avatar>
+                    <v-icon>check_box_outline_blank</v-icon>
+                  </v-list-tile-avatar>
+                  <v-list-tile-content>
+                    <v-list-tile-title>
+                      <v-text-field
+                        v-model="newItemName"
+                        placeholder="New item"
+                        @keyup.enter="newItem"
+                        @keyup.escape="newItemName = ''"
+                        @blur="newItemName = ''"
+                        full-width />
+                    </v-list-tile-title>
+                  </v-list-tile-content>
+                </v-list-tile>
+              </vue-draggable>
             </v-list>
           </v-card-text>
           <v-card-actions>
@@ -147,10 +153,12 @@
 <script>
 
 import ItemDialog from '@/components/ItemDialog.vue'
+import VueDraggable from 'vuedraggable'
 
 export default {
   components: {
-    ItemDialog
+    ItemDialog,
+    VueDraggable
   },
 
   props: {
@@ -171,7 +179,8 @@ export default {
   data: () => ({
     newItemName: '',
     editing_description: false,
-    new_description: ''
+    new_description: '',
+    drag: false
   }),
 
   methods: {
@@ -209,6 +218,11 @@ export default {
     saveDescription () {
       this.$emit('changeMetadata', {description: this.new_description.trim()})
       this.editing_description = false
+    },
+
+    finishItemDrag() {
+      this.drag = false
+      this.$emit('changeMetadata', {items: this.checklist.items})
     }
   }
 }
