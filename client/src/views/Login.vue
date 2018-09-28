@@ -20,6 +20,7 @@
                 placeholder="Username"
                 label="Username"
                 v-model="username"
+                prepend-icon="face"
                 :rules="[rules.required]" />
               <v-text-field
                 placeholder="password"
@@ -29,6 +30,7 @@
                 :append-icon="showPassword ? 'visibility_off' : 'visibility'"
                 :rules="[rules.required]"
                 counter
+                prepend-icon="fingerprint"
                 @keyup.enter="login"
                 @click:append="showPassword = !showPassword" />
             </v-layout>
@@ -43,6 +45,16 @@
         </v-card>
       </v-layout>
     </v-content>
+
+    <v-footer app height="auto">
+      <v-layout
+        justify-center
+        row
+        wrap
+        >
+        <span class="caption">&copy; 2018, Juanvi Vera. Under the GPL. <a href="https://github.com/Juanvvc/mytasks">Source code available in Github</a>.</span>
+      </v-layout>
+    </v-footer>
   </div>
 </template>
 

@@ -22,22 +22,30 @@
             </v-toolbar-title>
             <v-spacer />
             <!-- Select group -->
-            <v-select
-             placeholder="GROUP"
-             v-model="checklist.groupid"
-             :items="availableGroups"
-             item-text="name"
-             item-value="_id"
-             @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
-             >
-            </v-select>
+            <v-flex sm3>
+              <v-select
+               placeholder="GROUP"
+               v-model="checklist.groupid"
+               :items="availableGroups"
+               item-text="name"
+               item-value="_id"
+               @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
+               >
+              </v-select>
+            </v-flex>
             <!-- toggles -->
-            <v-btn :dark="checklist.hide_done_items" flat @click="$emit('changeMetadata', {hide_done_items: !checklist.hide_done_items})">
-             <v-icon>done_outline</v-icon>
-            </v-btn>
-            <v-btn :dark="checklist.hide_done_date" flat @click="$emit('changeMetadata', {hide_done_date: !checklist.hide_done_date})">
-              <v-icon>today</v-icon>
-            </v-btn>
+            <v-tooltip bottom>
+              <v-btn slot="activator" :dark="!checklist.hide_done_items" icon @click="$emit('changeMetadata', {hide_done_items: !checklist.hide_done_items})">
+                <v-icon>done_outline</v-icon>
+              </v-btn>
+              <span>Show/hide done items</span>
+            </v-tooltip>
+            <v-tooltip bottom>
+              <v-btn slot="activator" :dark="!checklist.hide_done_date" icon @click="$emit('changeMetadata', {hide_done_date: !checklist.hide_done_date})">
+                <v-icon>today</v-icon>
+              </v-btn>
+              <span>Show/hide done dates in items</span>
+            </v-tooltip>
 
             <v-menu bottom left>
               <v-btn
@@ -49,9 +57,9 @@
               </v-btn>
 
               <v-list>
-                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('duplicateChecklist')">Duplicate</v-list-tile-title></v-list-tile>
-                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('clearChecklist')">Clear</v-list-tile-title></v-list-tile>
-                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('deleteChecklist')">Delete</v-list-tile-title></v-list-tile>
+                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('duplicateChecklist')">Duplicate checklist</v-list-tile-title></v-list-tile>
+                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('clearChecklist')">Remove done items</v-list-tile-title></v-list-tile>
+                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('deleteChecklist')">Delete checklist</v-list-tile-title></v-list-tile>
               </v-list>
             </v-menu>
           </v-toolbar>
@@ -65,18 +73,18 @@
 
             <v-list>
               <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle'}">
-                <!-- existing items -->
+                <!-- normal items -->
                 <v-list-tile
+                  v-if="!item.checked || !checklist.hide_done_items"
                   v-for="(item, index) in checklist.items"
                   :key="item.name"
                   avatar
-                  v-if="!item.checked || !checklist.hide_done_items"
                   class="pointable">
-                  <v-list-tile-avatar @click="checkItem(index)">
+                  <v-list-tile-avatar @click="checkItem(index)" v-if="!isSection(item)">
                     <v-icon v-if="item.checked">check_box</v-icon>
                     <v-icon v-else>check_box_outline_blank</v-icon>
                   </v-list-tile-avatar>
-                  <v-list-tile-content class="handle">
+                  <v-list-tile-content class="handle" v-if="!isSection(item)">
                     <v-list-tile-title>
                       <span v-if="item.checked" class="checked" @dblclick="editItem(index)">{{ item.name }}</span>
                       <span v-else class="unchecked" @dblclick="editItem(index)">{{ item.name }}</span>
@@ -87,8 +95,12 @@
                       <span v-if="item.comment">{{item.comment}}</span>
                     </v-list-tile-sub-title>
                   </v-list-tile-content>
+                  <!-- section items -->
+                  <v-list-tile-content class="handle" v-else>
+                    <span color="secondary" class="header orange--text ligthen-1" @dblclick="editItem(index)">{{ item.name }}</span>
+                  </v-list-tile-content>
                 </v-list-tile>
-                <!-- Add a new item -->
+                <!-- Final row: Add a new item -->
                 <v-list-tile
                   avatar
                   slot="footer">
@@ -222,6 +234,12 @@ export default {
     finishItemDrag() {
       this.drag = false
       this.$emit('changeMetadata', {items: this.checklist.items})
+    },
+
+    isSection(item) {
+      // returns true if the item is a section
+      // A section is just a normal item which names starts with #
+      return item.name.startsWith('#')
     }
   }
 }

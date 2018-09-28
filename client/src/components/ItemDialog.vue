@@ -8,6 +8,7 @@
               label="Name"
               placeholder="Name"
               v-model="name"
+              hint="Start with # to convert to a section. Empty to delete item."
               prepend-icon="translate" />
              <v-textarea
               label="Comment"
@@ -31,7 +32,7 @@
                 <v-text-field
                   slot="activator"
                   v-model="due_date"
-                  label="Date"
+                  label="Due date"
                   persistent-hint
                   prepend-icon="event"
                 ></v-text-field>

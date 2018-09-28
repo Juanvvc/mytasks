@@ -10,15 +10,7 @@
           {{ errorMessage }}
       </v-alert>
       <router-view @showError="showError"/>
-      <v-footer app height="auto">
-        <v-layout
-          justify-center
-          row
-          wrap
-          >
-          <span class="caption">&copy; 2018, Juanvi Vera. <a href="https://github.com/Juanvvc/mytasks">Check me in Github</a>.</span>
-        </v-layout>
-      </v-footer>
+
     </v-app>
   </div>
 </template>
@@ -54,13 +46,10 @@ export default {
 }
 
 .application--wrap {
-  background-image: url("assets/background.jpg");
-  background-size: cover;
-  background-color: #222;
+  background-color: #ccccde;
 }
 
-.checklist-header {
-  background-image: url("assets/toolbar.jpg");
-  background-size: cover;
+.header  {
+  font-family: 'Roboto Slab', serif !important;
 }
 </style>
