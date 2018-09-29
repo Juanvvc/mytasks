@@ -51,7 +51,7 @@ def encode_auth_token(user_id):
     """
     try:
         payload = {
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=0, hours=4),
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=flask.current_app.config.get('DAYS_TO_EXPIRE_TOKEN')),
             'iat': datetime.datetime.utcnow(),
             'sub': user_id
         }

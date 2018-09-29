@@ -13,6 +13,7 @@ class BaseConfig(object):
     # MONGOURL='mongodb://user:password@localhost:27017/?authSource=the_database&authMechanism=SCRAM-SHA-256'
     MONGOURL = os.getenv('MONGOURL', 'mongodb://localhost:27017/')
     MONGODB = 'mytasks'
+    DAYS_TO_EXPIRE_TOKEN = 30
 
 
 class DevelopmentConfig(BaseConfig):

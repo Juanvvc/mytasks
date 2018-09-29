@@ -33,6 +33,10 @@
                 prepend-icon="fingerprint"
                 @keyup.enter="login"
                 @click:append="showPassword = !showPassword" />
+              <v-switch
+                label="Remember me"
+                v-model="rememberMe" />
+
             </v-layout>
             <v-layout align-center justify-center>
               <v-btn
@@ -69,6 +73,7 @@ export default {
     username: '',
     password: '',
     showPassword: false,
+    rememberMe: false,
     rules: {
       required: value => !!value || 'Required.'
     }
@@ -81,8 +86,15 @@ export default {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
-          sessionStorage.setItem('token', response.data.token)
-          sessionStorage.setItem('useruri', response.data.uri)
+          if(this.rememberMe) {
+            // if user wants to be remembered, save token in local storage
+            localStorage.setItem('token', response.data.token)
+            localStorage.setItem('useruri', response.data.uri)
+          } else {
+            // if user doesn't want to be remembered, save token in RAM
+            sessionStorage.setItem('token', response.data.token)
+            sessionStorage.setItem('useruri', response.data.uri)
+          }
           this.$router.push({ name: 'home' })
         }
       }).catch( () => {

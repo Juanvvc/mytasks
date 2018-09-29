@@ -139,15 +139,27 @@ export default {
     var token = sessionStorage.getItem('token')
     var useruri = sessionStorage.getItem('useruri')
 
+    // if these parameters are not in session storage, try in local storage
+    if(token === undefined || token === null) {
+      token = localStorage.getItem('token')
+      useruri = localStorage.getItem('useruri')
+    }
+
+    // if they are still undefined, call login
     if(token === undefined || token === null) {
       this.$router.push({ path: 'login' })
     }
 
-    this.mytasks = new MyTasksClient({username: token, password: ''}, () => {
-      this.$emit('showError', 'Authentication error. Session expired?')
-      this.$router.push({ name: 'login' })
-    })
-    this.loadUser(useruri)
+    if(token !== null && useruri !== null) {
+      // create the authentication object and the callback in case of error
+      this.mytasks = new MyTasksClient({username: token, password: ''}, () => {
+        // callback in case of auth error: just call login
+        this.$emit('showError', 'Authentication error. Session expired?')
+        this.$router.push({ name: 'login' })
+      })
+
+      this.loadUser(useruri)
+    }
   },
 
   methods: {
@@ -450,6 +462,7 @@ export default {
 
     logout() {
       sessionStorage.clear()
+      localStorage.clear()
       this.$router.push({name: 'login'})
     }
   }
