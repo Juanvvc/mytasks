@@ -100,27 +100,16 @@
                     <span color="secondary" class="header orange--text ligthen-1" @dblclick="editItem(index)">{{ item.name }}</span>
                   </v-list-tile-content>
                 </v-list-tile>
-                <!-- Final row: Add a new item -->
-                <v-list-tile
-                  avatar
-                  slot="footer">
-                  <v-list-tile-avatar>
-                    <v-icon>check_box_outline_blank</v-icon>
-                  </v-list-tile-avatar>
-                  <v-list-tile-content>
-                    <v-list-tile-title>
-                      <v-text-field
-                        v-model="newItemName"
-                        placeholder="New item"
-                        @keyup.enter="newItem"
-                        @keyup.escape="newItemName = ''"
-                        @blur="newItemName = ''"
-                        full-width />
-                    </v-list-tile-title>
-                  </v-list-tile-content>
-                </v-list-tile>
               </vue-draggable>
             </v-list>
+            <!-- Final row: Add a new item -->
+            <v-text-field
+                v-model="newItemName"
+                placeholder="New item"
+                @keyup.enter="newItem"
+                @keyup.escape="newItemName = ''"
+                @blur="newItemName = ''"
+                solo />
           </v-card-text>
         </v-card>
       </div>

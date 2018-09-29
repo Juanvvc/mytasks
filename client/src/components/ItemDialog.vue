@@ -8,7 +8,8 @@
               label="Name"
               placeholder="Name"
               v-model="name"
-              hint="Start with # to convert to a section. Empty to delete item."
+              hint="Start with # to convert to a section."
+              @keyup.enter="click(true)"
               prepend-icon="translate" />
              <v-textarea
               label="Comment"
@@ -36,15 +37,21 @@
                   persistent-hint
                   prepend-icon="event"
                 ></v-text-field>
-                <v-date-picker v-model="due_date" no-title @input="menuDate = false"></v-date-picker>
+                <v-date-picker
+                  v-model="due_date"
+                  first-day-of-week="1"
+                  no-title
+                  @input="menuDate = false" />
               </v-menu>
             </v-flex>
            </v-layout>
 
            <v-card-actions>
-               <v-spacer></v-spacer>
-               <v-btn color="primary darken-1" flat="flat" @click="click(true)">{{ yes }}</v-btn>
-               <v-btn color="primary darken-1" flat="flat" @click="click(false)">{{ no }}</v-btn>
+             <v-btn color="primary darken-1" flat @click="click(true)">OK</v-btn>
+             <v-btn color="primary darken-1" flat @click="click(false)">Cancel</v-btn>
+             <v-spacer></v-spacer>
+             <!-- Setting to name to empy will delet the item. TODO: look for a nicer way to do this -->
+             <v-btn color="warning darken-1" flat @click="name=''; click(true)">Delete</v-btn>
            </v-card-actions>
        </v-card>
    </v-dialog>
@@ -55,8 +62,6 @@ export default {
   data: () => ({
     visible: false,
     title: 'Edit Item',
-    yes: 'OK',
-    no: 'Cancel',
     due_date: '',
     name: '',
     comment: '',
@@ -68,8 +73,6 @@ export default {
       this.resolve = undefined
       this.reject = undefined
       this.title = ( config.title === undefined ? this.title : config.title )
-      this.yes = ( config.yes === undefined ? this.yes : config.yes )
-      this.no = ( config.no === undefined ? this.no : config.no )
 
       this.name = ( config.name === undefined ? this.name : config.name )
       this.comment = ( config.comment === undefined ? this.comment : config.comment )
@@ -91,6 +94,7 @@ export default {
         })
         this.name = ''
         this.comment = ''
+        this.due_date = ''
       }
     }
   }
