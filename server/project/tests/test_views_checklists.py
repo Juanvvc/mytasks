@@ -6,9 +6,9 @@ import project.model
 import project.views
 
 
-def auth_header(userid, password):
+def auth_header(username, password):
     import base64
-    authstr = base64.b64encode('{}:{}'.format(userid, password).encode()).decode()
+    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
     return 'Basic {}'.format(authstr)
 
 
@@ -30,10 +30,10 @@ class TestChecklistsView(flask_testing.TestCase):
 
     def setUp(self):
         self.user = project.model.create_user('USER1', 'PASSWORD1')
-        self.user.create_group({'name': 'GROUP1'})
-        self.group2 = self.user.create_group({'name': 'GROUP2', 'private': False})
-        self.checklist1 = self.group2.create_checklist({'name': 'CHECKLIST1'})
-        self.checklist2 = self.group2.create_checklist({'name': 'CHECKLIST2'})
+        self.user.create_child({'name': 'GROUP1'})
+        self.group2 = self.user.create_child({'name': 'GROUP2', 'private': False})
+        self.checklist1 = self.group2.create_child({'name': 'CHECKLIST1'})
+        self.checklist2 = self.group2.create_child({'name': 'CHECKLIST2'})
 
         project.model.create_user('USER2', 'PASSWORD2')
 
@@ -70,14 +70,14 @@ class TestChecklistsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 400)
 
             # create a checklist
-            new_info = dict(name='NEWNAME', groupid=str(self.group2.id()))
+            new_info = dict(name='NEWNAME', _parentid=str(self.group2.id()))
             response = self.client.post(url, data=json.dumps(new_info), content_type='application/json', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data)
             self.assertEqual(data['name'], 'NEWNAME')
-            self.assertTrue('groupid' in data)
-            self.assertEqual(data['groupid'], str(self.group2.id()))
+            self.assertTrue('_parentid' in data)
+            self.assertEqual(data['_parentid'], str(self.group2.id()))
 
     def test_updatechecklist(self):
         """ Test to update a checklist, and its errors """

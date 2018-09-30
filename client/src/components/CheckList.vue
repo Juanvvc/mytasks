@@ -25,11 +25,11 @@
             <v-flex sm3>
               <v-select
                placeholder="GROUP"
-               v-model="checklist.groupid"
+               v-model="checklist._parentid"
                :items="availableGroups"
                item-text="name"
                item-value="_id"
-               @change="$emit('changeChecklistGroup', group._id, checklist.groupid)"
+               @change="$emit('changeChecklistGroup', group._id, checklist._parentid)"
                >
               </v-select>
             </v-flex>

@@ -27,31 +27,87 @@ def configure_model(app):
     logger = app.logger
 
 
-class User(object):
+class BaseElement(object):
+    def __init__(self, collection, parent=None, children_class=None):
+        """
+        You must include an _id in the self.info dictionary in your constructor.
+
+        Args:
+            collection: a db.COLLECTION for this element
+            parent: The BaseElement which contains this one, if any
+        """
+        self.info = dict(_id=None)
+        self.collection = collection
+        self.parent = parent
+        self.children_class = children_class
+
+    def id(self):
+        """ A convenience method to get the bson.objectid.ObjectId of this element """
+        if '_id' not in self.info:
+            raise Exception('Somehow, the element has no identifier')
+        return self.info['_id']
+
+    def summary(self):
+        """ Returns the summary of the element.
+
+        This method shouldn't return any dangerous information: passwords, hashes of passwords...
+        Only data intented that can be publicly accessed is returned. """
+
+        summary = dict(
+            _id=str(self.id()),
+            name=self.info.get('name', '')
+        )
+
+        if self.parent is not None:
+            summary.update({'_parentid': self.parent.id()})
+
+        return summary
+
+    def save(self):
+        self.collection.save(self.info)
+        return True
+
+    def visible_by(self, user_id):
+        """ Returns True if user_id is allowed to access the BaseElement """
+        assert self.parent is not None
+        return self.parent.visible_by(user_id)
+
+    def editable_by(self, user_id):
+        """ Returns True if the user_id is allowed to edit or remove this BaseElement """
+        assert self.parent is not None
+        return self.parent.editable_by(user_id)
+
+    def delete(self):
+        self.collection.remove({'_id': self.id()})
+        return True
+
+    def create_child(self, info):
+        """ Creates a new chil in this element
+
+        If info includes a _parentid, it is ignored
+        """
+        if self.children_class is None:
+            raise Exception('This element type cannot have children')
+        new_child = self.children_class(self, None)
+        # update the info and save
+        new_child.info.update(info)
+        new_child.info.update({'_parentid': self.id()})
+        new_child.save()
+        return new_child
+
+
+class User(BaseElement):
     def __init__(self, id):
+        super().__init__(db.users)
         if id is None:
             # create a new user
             id = db.users.insert_one({}).inserted_id
 
-        self.info = db.users.find_one({'_id': id})
-        if self.info is None:
+        new_info = db.users.find_one({'_id': id})
+        if new_info is None:
             raise Exception('User not found: {}'.format(id))
-
-    def id(self):
-        """ A convenience method to get the bson.objectid.ObjectId of this user """
-        if '_id' not in self.info:
-            raise Exception('Somehow, the user has no identifier')
-        return self.info['_id']
-
-    def summary(self):
-        """ Returns the summary of the userself.
-
-        This method shouldn't return any dangerous information: passwords, hashes of passwords...
-        Only data intented that can be publicly accessed is returned. """
-        return dict(
-            _id=str(self.id()),
-            name=self.info.get('name', '')
-        )
+        self.info.update(new_info)
+        self.children_class = Group
 
     def hash_password(self, password):
         """ Save a password hash in the user.
@@ -74,103 +130,30 @@ class User(object):
         else:
             return False
 
-    def save(self):
-        logger.debug('Saving user %s', self.id())
-        db.users.save(self.info)
-        return True
 
-    def delete(self):
-        logger.debug('Deleting user %s', self.id())
-        # First, remove all groups and checklists owned by this user
-        db.groups.remove({'userid': self.id()})
-        db.checklists.remove({'userid': self.id()})
-        # Then, remove the user
-        db.users.remove({'_id': self.id()})
-        return True
-
-    def create_group(self, info):
-        """ Creates a new group owned by this user.
-
-        If info includes a userid, it is ignored
-        """
-        new_group = Group(self, None)
-        new_info = info.copy()
-        # the deafult value for privacy
-        new_info['private'] = new_info.get('private', True)
-        # userid is ignored, it exist
-        new_info.pop('userid', None)
-        # update the info and save
-        new_group.info.update(new_info)
-        new_group.save()
-        return new_group
-
-
-class Group(object):
+class Group(BaseElement):
     """ Groups are private unless explicitely configured as non private """
     def __init__(self, user, id):
+        super().__init__(db.groups, parent=user)
         assert type(user) == User
         if id is None:
             # create a new group
-            id = db.groups.insert_one({'userid': user.id()}).inserted_id
+            id = db.groups.insert_one({'_parentid': user.id(), 'private': True}).inserted_id
 
-        self.info = db.groups.find_one({'_id': id})
-        if self.info is None:
+        new_info = db.groups.find_one({'_id': id})
+        if new_info is None:
             raise Exception('Group not found: {}'.format(id))
-        self.user = user
-
-    def id(self):
-        """ A convenience method to get the bson.objectid.ObjectId of this group """
-        if '_id' not in self.info:
-            raise Exception('Somehow, the group has no identifier')
-        return self.info['_id']
+        self.info.update(new_info)
+        self.children_class = Checklist
 
     def summary(self):
-        """ Returns the summary of the group.
-
-        This method shouldn't return any dangerous information.
-        Only serializable intented that can be publicly accessed is returned. """
-        return dict(
-            _id=str(self.id()),
-            name=self.info.get('name', ''),
-            userid=str(self.info.get('userid', '')),
-            private=self.info.get('private', True)
-        )
-
-    def save(self):
-        logger.debug('Saving group %s/%s', self.user.id(), self.id())
-        db.groups.save(self.info)
-        return True
-
-    def delete(self):
-        """ You can only remove empty groups """
-        logger.debug('Deleting group %s/%s', self.user.id(), self.id())
-        # You cannot remove the group if there are documents in it
-        if db.checklists.count_documents({'groupid': self.id()}) > 0:
-            return False
-        # Then, remove the user
-        db.groups.remove({'_id': self.id()})
-        return True
-
-    def create_checklist(self, info):
-        """ Creates a new checklist in this group and owned by its user.
-
-        If info includes a groupid, it is ignored.
-        """
-
-        new_checklist = Checklist(self, None)
-        new_info = info.copy()
-        # groupid, if exists, is ignored
-        new_info.pop('groupid', None)
-        # update the info and save
-        new_checklist.info.update(new_info)
-        new_checklist.save()
-        return new_checklist
+        return super().summary().update({'private': self.info.get('private', True)})
 
     def visible_by(self, user_id):
         """ Returns True if user_id is allowed to access the group """
-        assert self.user is not None
+        assert self.parent is not None
         # a user can access its own groups always
-        if str(user_id) == str(self.user.id()):
+        if str(user_id) == str(self.parent.id()):
             return True
         # a different user can access only to non private groups
         return not self.info.get('private', True)
@@ -178,58 +161,37 @@ class Group(object):
     def editable_by(self, user_id):
         """ Returns True if the user_id is allowed to edit or remove this group """
         # only owners can edit or remove groups
-        assert self.user is not None
-        return str(self.user.id()) == str(user_id)
+        assert self.parent is not None
+        return str(self.parent.id()) == str(user_id)
 
 
-class Checklist(object):
+class Checklist(BaseElement):
     def __init__(self, group, id):
+        super().__init__(db.checklists, parent=group)
         assert type(group) == Group
         if id is None:
             # create a new checklist
-            id = db.checklists.insert_one({'groupid': group.id()}).inserted_id
+            id = db.checklists.insert_one({'_parentid': group.id()}).inserted_id
 
-        self.info = db.checklists.find_one({'_id': id})
-        if self.info is None:
+        new_info = db.checklists.find_one({'_id': id})
+        if new_info is None:
             raise Exception('Checklist not found: {}'.format(id))
-        self.group = group
+        self.info.update(new_info)
+        self.children_class = Item
 
-    def id(self):
-        """ A convenience method to get the bson.objectid.ObjectId of this checklist """
-        if '_id' not in self.info:
-            raise Exception('Somehow, the group has no identifier')
-        return self.info['_id']
 
-    def summary(self):
-        """ Returns the summary of the checklist.
+class Item(BaseElement):
+    def __init__(self, checklist, id):
+        super().__init__(db.items, parent=checklist)
+        assert type(checklist) == Checklist
+        if id is None:
+            # create a new checklist
+            id = db.items.insert_one({'_parentid': checklist.id()}).inserted_id
 
-        This method shouldn't return any dangerous information.
-        Only data intented that can be publicly accessed is returned. """
-        return dict(
-            _id=str(self.id()),
-            name=self.info.get('name', ''),
-            groupid=str(self.info.get('groupid', '')),
-        )
-
-    def save(self):
-        logger.debug('Saving checklist %s/%s/%s', self.group.user.id(), self.group.id(), self.id())
-        db.checklists.save(self.info)
-        return True
-
-    def delete(self):
-        logger.debug('Deleting checklist %s/%s/%s', self.group.user.id(), self.group.id(), self.id())
-        db.checklists.remove({'_id': self.id()})
-        return True
-
-    def visible_by(self, user_id):
-        """ Returns True if user_id is allowed to access the checklist """
-        assert self.group is not None
-        return self.group.visible_by(user_id)
-
-    def editable_by(self, user_id):
-        """ Returns True if the user_id is allowed to edit or remove this group """
-        assert self.group is not None
-        return self.group.editable_by(user_id)
+        new_info = db.items.find_one({'_id': id})
+        if new_info is None:
+            raise Exception('Item not found: {}'.format(id))
+        self.info.update(new_info)
 
 
 def available_users():
@@ -251,8 +213,8 @@ def available_groups(user_id, only_public=False):
         except InvalidId:
             return []
     if only_public:
-        return db.groups.find({'userid': user_id, 'private': False}, {'name': 1, 'private': 1})
-    return db.groups.find({'userid': user_id}, {'name': 1, 'private': 1})
+        return db.groups.find({'_parentid': user_id, 'private': False}, {'name': 1, 'private': 1})
+    return db.groups.find({'_parentid': user_id}, {'name': 1, 'private': 1})
 
 
 def available_checklists(group_id):
@@ -262,7 +224,7 @@ def available_checklists(group_id):
             group_id = ObjectId(group_id)
         except InvalidId:
             return []
-    return db.checklists.find({'groupid': group_id}, {'name': 1, 'userid': 1, 'groupid': 1})
+    return db.checklists.find({'_parentid': group_id}, {'name': 1, '_parentid': 1})
 
 
 def create_user(name, password=None):
@@ -293,8 +255,8 @@ def search_user(userid):
             return None
     try:
         return User(userid)
-    except Exception:
-        logger.warn('Something happened constructing the user: %s', userid)
+    except Exception as exc:
+        logger.warn('Something happened constructing the user %s: %s', userid, str(exc))
         return None
 
 
@@ -320,16 +282,16 @@ def search_group(groupid):
             return None
     groupinfo = db.groups.find_one({'_id': groupid})
     if groupinfo is None:
-        logger.warn('Checklist not found: %s', groupid)
+        logger.warn('Group not found: %s', groupid)
         return None
-    user = search_user(groupinfo['userid'])
+    user = search_user(groupinfo['_parentid'])
     if user is None:
         logger.warn('Group found, but user doesn\'t: %s', groupid)
         return None
     try:
         return Group(user, groupid)
-    except Exception:
-        logger.warn('Something happened constructing the group: %s', groupid)
+    except Exception as exc:
+        logger.warn('Something happened constructing the group %s: %s', groupid, str(exc))
         return None
 
 
@@ -344,12 +306,12 @@ def search_checklist(checklistid):
     if checklistinfo is None:
         logger.warn('Checklist not found: %s', checklistid)
         return None
-    group = search_group(checklistinfo['groupid'])
+    group = search_group(checklistinfo['_parentid'])
     if group is None:
         logger.warn('Checklist found, but group doesn\'t: %s', checklistid)
         return None
     try:
         return Checklist(group, checklistid)
-    except Exception:
-        logger.warn('Something happened constructing the checklist: %s', checklistid)
+    except Exception as exc:
+        logger.warn('Something happened constructing the checklist %s: %s', checklistid, str(exc))
         return None

@@ -6,9 +6,9 @@ import project.model
 import project.views
 
 
-def auth_header(userid, password):
+def auth_header(username, password):
     import base64
-    authstr = base64.b64encode('{}:{}'.format(userid, password).encode()).decode()
+    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
     return 'Basic {}'.format(authstr)
 
 
@@ -29,7 +29,7 @@ class TestUsersView(flask_testing.TestCase):
 
     def setUp(self):
         self.user = project.model.create_user('USER1', 'PASSWORD1')
-        self.user.create_group({'name': 'GROUP1'})
+        self.user.create_child({'name': 'GROUP1'})
 
     def tearDown(self):
         project.model.db.command('dropDatabase')

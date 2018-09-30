@@ -6,9 +6,9 @@ import project.model
 import project.views
 
 
-def auth_header(userid, password):
+def auth_header(username, password):
     import base64
-    authstr = base64.b64encode('{}:{}'.format(userid, password).encode()).decode()
+    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
     return 'Basic {}'.format(authstr)
 
 
@@ -30,9 +30,11 @@ class TestGroupsView(flask_testing.TestCase):
 
     def setUp(self):
         self.user = project.model.create_user('USER1', 'PASSWORD1')
-        self.group1 = self.user.create_group({'name': 'GROUP1', 'private': True})
-        self.group2 = self.user.create_group({'name': 'GROUP2', 'private': False})
-        self.group2.create_checklist({'name': 'NEWCHECKLIST'})
+        self.group1 = self.user.create_child({'name': 'GROUP1', 'private': True})
+        self.group2 = self.user.create_child({'name': 'GROUP2', 'private': False})
+        c = self.group2.create_child({'name': 'NEWCHECKLIST'})
+        import pprint
+        pprint.pprint(c.summary())
 
         self.user2 = project.model.create_user('USER2', 'PASSWORD2')
 
@@ -152,13 +154,15 @@ class TestGroupsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 404)
 
             # non empty group: check it exists, try to delete, check it still exists
+            ck = project.model.db.checklists.find_one({'_parentid': self.group2.id()})
+            self.assertFalse(ck is None)
             url = flask.url_for('groups.info', user_id=str(self.user.id()), group_id=str(self.group2.id()))
             response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertEqual(data.get('status', 0), 0)
             response = self.client.delete(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
-            self.assertEqual(data.get('status', 0), 500)
+            self.assertEqual(data.get('status', 0), 401)
             response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
             data = json.loads(response.data.decode())
             self.assertEqual(data.get('status', 0), 0)

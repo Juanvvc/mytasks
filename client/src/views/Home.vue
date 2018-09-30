@@ -281,7 +281,7 @@ export default {
       this.mytasks.post(`/checklists/`, {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
-        groupid: groupId,
+        _parentid: groupId,
         hide_done_date: false,
         hide_done_items: false,
         items: []
@@ -413,7 +413,7 @@ export default {
       var newData = {
         name: this.activeChecklist.name,
         description: this.activeChecklist.description,
-        groupid: toGroupId,
+        _parentid: toGroupId,
         items: this.activeChecklist.items
       }
       // create a new checklist in toGroup with this data
@@ -446,7 +446,7 @@ export default {
         name: this.activeChecklist.name,
         description: this.activeChecklist.description,
         items: this.activeChecklist.items,
-        groupid: this.activeGroup._id
+        _parentid: this.activeGroup._id
       }
       this.mytasks.post('/checklists/', newData).then( response => {
         if(response.data.errorMessage !== undefined) {

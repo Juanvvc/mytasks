@@ -12,7 +12,7 @@ def get_blueprint(auth=None):
 
 
 def new_group():
-    # get the current user
+    # get the current user. The group is goung to be created for him
     user_id = flask.g.user_id
     user = model.search_user(user_id)
     if user is None:
@@ -26,7 +26,7 @@ def new_group():
     if name is None:
         flask.abort(400, 'A group needs a name')
 
-    group = user.create_group(new_info)
+    group = user.create_child(new_info)
     # default value for private
     group.info['private'] = group.info.get('private', True)
     if(group.save()):
@@ -46,8 +46,8 @@ def single_group(group_id):
 
     info = group.info.copy()
     info['_id'] = str(info['_id'])
-    if 'userid' in info:
-        info['userid'] = str(info['userid'])
+    if '_parentid' in info:
+        info['_parentid'] = str(info['_parentid'])
     checklists_info = list()
     for c in model.available_checklists(group_id):
         checklist_info = dict()
@@ -83,10 +83,14 @@ def delete_group(group_id):
     group = model.search_group(group_id)
     # check the group exist
     if group is None:
-        flask.abort(404, 'User not found')
+        flask.abort(404, 'Group not found')
     # check the group is editable by this user
     if not group.editable_by(flask.g.user_id):
-        flask.abort(401, 'Not allows to delete this group')
+        flask.abort(401, 'Not allowed to delete this group')
+
+    # check the group is empty
+    if model.db.checklists.count({'_parentid': group.id()}) > 0:
+        flask.abort(401, 'Group is not empty')
 
     if group.delete():
         return flask.jsonify({'status': 200, 'message': 'Group {} deleted'.format(group_id)})

@@ -22,7 +22,7 @@ def new_checklist():
         flask.abort(400, 'A checklists needs a name')
 
     # check the group
-    group_id = new_info.get('groupid', None)
+    group_id = new_info.get('_parentid', None)
     if group_id is None:
         flask.abort(400, 'A checklists needs a name')
     group = model.search_group(group_id)
@@ -30,7 +30,7 @@ def new_checklist():
         flask.abort(404, 'Group not found')
 
     # create the checklist
-    checklist = group.create_checklist(new_info)
+    checklist = group.create_child(new_info)
     if(checklist.save()):
         return single_checklist(checklist.id())
     else:
@@ -48,8 +48,8 @@ def single_checklist(checklist_id):
 
     info = checklist.info.copy()
     info['_id'] = str(info['_id'])
-    if 'groupid' in info:
-        info['groupid'] = str(info['groupid'])
+    if '_parentid' in info:
+        info['_parentid'] = str(info['_parentid'])
     info['uri'] = flask.url_for('checklists.info', checklist_id=checklist_id, _external=True)
     return flask.jsonify(info)
 
@@ -78,7 +78,11 @@ def delete_checklist(checklist_id):
     if checklist is None:
         flask.abort(404, 'Checklist not found')
     if not checklist.editable_by(flask.g.user_id):
-        flask.abort(401, 'You are not allowed to ecit this checklist')
+        flask.abort(401, 'You are not allowed to edit this checklist')
+
+    # check the checklist is empty
+    if model.db.items.count_documents({'_parentid': checklist.id()}) > 0:
+        flask.abort(401, 'Group is not empty')
 
     if checklist.delete():
         return flask.jsonify({'status': 200, 'message': 'Checklist {} deleted'.format(checklist_id)})
