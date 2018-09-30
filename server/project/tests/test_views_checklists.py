@@ -1,15 +1,9 @@
 import unittest
 import flask
 import flask_testing
-import json
 import project.model
 import project.views
-
-
-def auth_header(username, password):
-    import base64
-    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
-    return 'Basic {}'.format(authstr)
+from project.tests import HTTPHelper
 
 
 class TestChecklistsView(flask_testing.TestCase):
@@ -42,9 +36,9 @@ class TestChecklistsView(flask_testing.TestCase):
 
     def test_availablechecklists(self):
         with self.client:
-            url = flask.url_for('groups.info', group_id=self.group2.id())
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            url = flask.url_for('groups.info', _id=self.group2.id())
+            data = http.get(url)
             checklists = data.get('checklists', [])
             self.assertTrue(type(checklists) == list)
             self.assertEqual(len(checklists), 2)
@@ -52,27 +46,25 @@ class TestChecklistsView(flask_testing.TestCase):
 
     def test_onechecklist(self):
         with self.client:
-            url = flask.url_for('checklists.info', checklist_id=self.checklist1.id())
-
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('checklists.info', _id=self.checklist1.id())
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            data = http.get(url)
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data and data['name'] == 'CHECKLIST1')
 
     def test_newchecklist(self):
-        """ Test creation of chcklist, and its errors """
+        """ Test creation of checklist, and its errors """
         with self.client:
             url = flask.url_for('checklists.new')
 
-            # try to create a user without information
-            response = self.client.post(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            # try to create a checklist without information
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            data = http.post(url)
             self.assertEqual(data.get('status', 0), 400)
 
             # create a checklist
             new_info = dict(name='NEWNAME', _parentid=str(self.group2.id()))
-            response = self.client.post(url, data=json.dumps(new_info), content_type='application/json', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.post(url, data=new_info)
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data)
             self.assertEqual(data['name'], 'NEWNAME')
@@ -80,59 +72,73 @@ class TestChecklistsView(flask_testing.TestCase):
             self.assertEqual(data['_parentid'], str(self.group2.id()))
 
     def test_updatechecklist(self):
+        """ Test to update an item inside a checklist by updating the checklist: it should't be possible """
+        with self.client:
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+
+            # crate a new checklist with an item
+            nc = self.group2.create_child({'name': 'NEWCHECKLIST'})
+            nc.create_child({'name': 'NEWITEM'})
+
+            # get information about the checklist
+            url = flask.url_for('checklists.info', _id=str(nc.id()))
+            data = http.get(url)
+            # The new item must be in the checklist
+            self.assertEqual(len(data['items']), 1)
+            self.assertTrue(data['items'][0].get('name', None), 'NEWITEM')
+
+            # get again the information in the checklist, and check the item has not changed
+            data['items'][0]['name'] = 'ANOTHER NAME'
+            data = http.post(url, data={'items': data['items']})
+            self.assertFalse('error_message' in data)
+            self.assertTrue(data['items'][0].get('name', None), 'NEWITEM')
+
+    def test_updatechecklist2(self):
         """ Test to update a checklist, and its errors """
         with self.client:
-            url = flask.url_for('checklists.info', checklist_id=str(self.checklist1.id()))
+            url = flask.url_for('checklists.info', _id=str(self.checklist1.id()))
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
 
             # try to update a checklist without information
-            response = self.client.put(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.put(url)
             self.assertTrue('error_message' in data)
             self.assertEqual(data['status'], 400)
 
             # update a checklist
-            response = self.client.put(url, data=json.dumps(dict(name='NEWNAME2')), content_type='application/json', headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.put(url, data=dict(name='NEWNAME2'))
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data and data['name'] == 'NEWNAME2')
 
-            # USER2 cannot update a checklist owned by USER1
-            response = self.client.get(url, headers={'Authorization': auth_header('USER2', 'PASSWORD2')})
-            data = json.loads(response.data.decode())
+            # USER2 can get but not update a checklist owned by USER1
+            data = http.get(url, auth=["USER2", "PASSWORD2"])
             self.assertFalse('error_message' in data)
-            response = self.client.put(url, data=json.dumps(dict(name='NEWNAME2')), content_type='application/json', headers={'Authorization': auth_header('USER2', 'PASSWORD2')})
-            data = json.loads(response.data.decode())
+            data = http.put(url, data=dict(name='NEWNAME3'), auth=["USER2", "PASSWORD2"])
             self.assertTrue('error_message' in data)
             self.assertEqual(data['status'], 401)
 
     def test_deletechecklist(self):
         """ Test deleting a checklist, and its errors """
         with self.client:
-            url = flask.url_for('checklists.info', checklist_id=str(self.checklist1.id()))
+            url = flask.url_for('checklists.info', _id=str(self.checklist1.id()))
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
 
             # USER2 cannot delete a checklist owned by USER1
-            response = self.client.get(url, headers={'Authorization': auth_header('USER2', 'PASSWORD2')})
-            data = json.loads(response.data.decode())
+            data = http.get(url, auth=["USER2", "PASSWORD2"])
             self.assertFalse('error_message' in data)
-            response = self.client.delete(url, headers={'Authorization': auth_header('USER2', 'PASSWORD2')})
-            data = json.loads(response.data.decode())
+            data = http.delete(url, auth=["USER2", "PASSWORD2"])
             self.assertEqual(data['status'], 401)
-            response = self.client.get(url, headers={'Authorization': auth_header('USER2', 'PASSWORD2')})
-            data = json.loads(response.data.decode())
+            data = http.get(url, auth=["USER2", "PASSWORD2"])
             self.assertFalse('error_message' in data)
 
             # USER1 can delete his own checklists
-            response = self.client.delete(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.delete(url)
             self.assertEqual(data.get('status', 0), 200)
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.get(url)
             self.assertEqual(data.get('status', 0), 404)
 
             # non existing checklist
-            url = flask.url_for('checklists.info', user_id=str(self.user.id()), group_id=str(self.group2.id()), checklist_id='XXX')
-            response = self.client.delete(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('checklists.info', _id='XXX')
+            data = http.delete(url)
             self.assertTrue('error_message' in data)
             self.assertEqual(data.get('status', 0), 404)
 

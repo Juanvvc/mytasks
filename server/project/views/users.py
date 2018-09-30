@@ -6,7 +6,7 @@ import project.server.auth
 def get_blueprint(auth=None):
     blueprint = flask.Blueprint('users', __name__)
     blueprint.add_url_rule('/users/', view_func=auth.login_required(users), methods=['GET'], endpoint='available')
-    blueprint.add_url_rule('/users/<user_id>', view_func=auth.login_required(single_user), methods=['GET'], endpoint='info')
+    blueprint.add_url_rule('/users/<_id>', view_func=auth.login_required(single_user), methods=['GET'], endpoint='info')
     blueprint.add_url_rule('/login', view_func=auth.login_required(login), methods=['GET'], endpoint='login')
 
     return blueprint
@@ -16,7 +16,7 @@ def login():
     info = dict()
     info['token'] = project.server.auth.encode_auth_token(flask.g.user_id).decode()
     info['_id'] = str(flask.g.user_id)
-    info['uri'] = flask.url_for('users.info', user_id=str(flask.g.user_id), _external=True)
+    info['uri'] = flask.url_for('users.info', _id=str(flask.g.user_id), _external=True)
     info['status'] = 200
     return flask.jsonify(info)
 
@@ -26,23 +26,23 @@ def users():
     for user in model.available_users():
         info = user.copy()
         info['_id'] = str(info['_id'])
-        info['uri'] = flask.url_for('users.info', user_id=info['_id'], _external=True)
+        info['uri'] = flask.url_for('users.info', _id=info['_id'], _external=True)
         available_users.append(info)
     return flask.jsonify(available_users)
 
 
-def single_user(user_id):
-    user = model.search_user(user_id)
+def single_user(_id):
+    user = model.search_element(model.User, _id)
     if user is None:
         flask.abort(404)
     info = user.summary()
     groups_info = list()
-    only_public = (str(user_id) != flask.g.user_id)
-    for g in model.available_groups(user_id, only_public=only_public):
+    only_public = (str(_id) != flask.g.user_id)
+    for g in model.available_groups(_id, only_public=only_public):
         group_info = g.copy()
         group_info['_id'] = str(g['_id'])
-        group_info['uri'] = flask.url_for('groups.info', group_id=group_info['_id'], _external=True)
+        group_info['uri'] = flask.url_for('groups.info', _id=group_info['_id'], _external=True)
         groups_info.append(group_info)
     info['groups'] = groups_info
-    info['uri'] = flask.url_for('users.info', user_id=user_id, _external=True)
+    info['uri'] = flask.url_for('users.info', _id=_id, _external=True)
     return flask.jsonify(info)

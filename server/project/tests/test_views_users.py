@@ -1,15 +1,9 @@
 import unittest
 import flask
 import flask_testing
-import json
 import project.model
 import project.views
-
-
-def auth_header(username, password):
-    import base64
-    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
-    return 'Basic {}'.format(authstr)
+from project.tests import HTTPHelper
 
 
 class TestUsersView(flask_testing.TestCase):
@@ -37,9 +31,9 @@ class TestUsersView(flask_testing.TestCase):
     def test_availableusers(self):
         with self.client:
             url = flask.url_for('users.available')
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
 
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            data = http.get(url)
             self.assertFalse('error_message' in data)
             self.assertTrue(type(data) == list)
             self.assertTrue(len(data) == 1)
@@ -47,9 +41,9 @@ class TestUsersView(flask_testing.TestCase):
 
     def test_oneuser(self):
         with self.client:
-            url = flask.url_for('users.info', user_id=str(self.user.id()))
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id=str(self.user.id()))
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            data = http.get(url)
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data)
             self.assertEqual(data['name'], 'USER1')

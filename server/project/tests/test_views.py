@@ -5,12 +5,7 @@ import flask
 import project.model as model
 import project.server.auth
 import project.views
-
-
-def auth_header(username, password):
-    import base64
-    authstr = base64.b64encode('{}:{}'.format(username, password).encode()).decode()
-    return 'Basic {}'.format(authstr)
+from project.tests import HTTPHelper
 
 
 class TestViews(flask_testing.TestCase):
@@ -45,7 +40,15 @@ class TestViews(flask_testing.TestCase):
 
     def test_notlogged(self):
         with self.client:
-            url = flask.url_for('users.info', user_id=str(self.user.id()))
+            url = flask.url_for('users.info', _id=str(self.user.id()))
+            response = self.client.get(url)
+            data = json.loads(response.data.decode())
+            self.assertEqual(data.get('status', 0), 401)
+
+    def test_noauth(self):
+        " Try to log with a bad password "
+        with self.client:
+            url = flask.url_for('users.info', _id=str(self.user.id()))
             response = self.client.get(url)
             data = json.loads(response.data.decode())
             self.assertEqual(data.get('status', 0), 401)
@@ -53,17 +56,17 @@ class TestViews(flask_testing.TestCase):
     def test_baspassword(self):
         " Try to log with a bad password "
         with self.client:
-            url = flask.url_for('users.info', user_id=str(self.user.id()))
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'BADWOLF')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id=str(self.user.id()))
+            http = HTTPHelper(self.client, ['USER1', 'BADWOLF'])
+            data = http.get(url)
             self.assertEqual(data.get('status', 0), 401)
 
     def test_logged(self):
         " Log with a good password "
         with self.client:
-            url = flask.url_for('users.info', user_id=str(self.user.id()))
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id=str(self.user.id()))
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            data = http.get(url)
             self.assertFalse('error_message' in data)
             self.assertEqual(data.get('name', ''), 'USER1')
 
@@ -72,31 +75,29 @@ class TestViews(flask_testing.TestCase):
         with self.client:
             # get the token
             url = flask.url_for('users.login')
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+            data = http.get(url)
             self.assertEqual(data.get('status', 0), 200)
             self.assertNotEqual(data.get('token', ''), '')
             # test the token
             token = data['token']
-            url = flask.url_for('users.info', user_id=str(self.user.id()))
-            response = self.client.get(url, headers={'Authorization': auth_header(token, '')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id=str(self.user.id()))
+            data = http.get(url, auth=[token, ''])
             self.assertTrue('error_message' not in data)
             self.assertEqual(data.get('name', ''), 'USER1')
             self.assertEqual(flask.g.user_id, str(self.user.id()))
 
     def test_404(self):
         with self.client:
+            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
             # valid ObjectID
-            url = flask.url_for('users.info', user_id='1234567890ab1234567890ab')
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id='1234567890ab1234567890ab')
+            data = http.get(url)
             self.assertEqual(data.get('status', 0), 404)
 
             # Not valid ObjectId
-            url = flask.url_for('users.info', user_id='XX')
-            response = self.client.get(url, headers={'Authorization': auth_header('USER1', 'PASSWORD1')})
-            data = json.loads(response.data.decode())
+            url = flask.url_for('users.info', _id='XX')
+            data = http.get(url)
             self.assertEqual(data.get('status', 0), 404)
 
 

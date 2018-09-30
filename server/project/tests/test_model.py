@@ -37,6 +37,10 @@ class TestModel(unittest.TestCase):
         self.assertEqual(type(user), model.User)
         self.assertEqual(user.info['name'], 'NAME0')
 
+        user = model.search_element(model.User, self.user0)
+        self.assertEqual(type(user), model.User)
+        self.assertEqual(user.info['name'], 'NAME0')
+
     def test_search_username(self):
         "Test if a user can be found usigs its username"
         user = model.search_username('NAME0')
@@ -94,7 +98,7 @@ class TestModel(unittest.TestCase):
         user = model.User(self.user1)
         group = user.create_child({'name': 'NEW_GROUP', '_parentid': 'XXX'})
 
-        group_new = model.search_group(group.id())
+        group_new = model.search_element(model.Group, group.id())
         self.assertEqual(type(group_new), model.Group)
         self.assertTrue('name' in group_new.info)
         self.assertTrue(group_new.info.get('name', None) == 'NEW_GROUP')
@@ -104,27 +108,27 @@ class TestModel(unittest.TestCase):
         self.assertTrue(group_new.info['private'])
 
         # finaly, assert the new group has the right _parentid and not XXX
-        self.assertEqual(group_new.parent.id(), self.user1)
+        self.assertEqual(group_new.parent().id(), self.user1)
 
     def test_group_edit(self):
         " Change the name of a group "
-        group = model.search_group(self.group0)
+        group = model.search_element(model.Group, self.group0)
         group.info['name'] = 'GROUPNEW'
         self.assertTrue(group.save())
 
-        new_group = model.search_group(self.group0)
+        new_group = model.search_element(model.Group, self.group0)
         self.assertEqual(new_group.info['name'], 'GROUPNEW')
 
     def test_group_delete(self):
         " Test delete an empty group "
-        group = model.search_group(self.group11)
+        group = model.search_element(model.Group, self.group11)
         self.assertFalse(group is None)
         self.assertTrue(group.delete())
-        self.assertTrue(model.search_group(self.group11) is None)
+        self.assertTrue(model.search_element(model.Group, self.group11) is None)
 
     def test_checklist_create(self):
         """ Test checklists can be created.  """
-        group = model.search_group(self.group0)
+        group = model.search_element(model.Group, self.group0)
         self.assertFalse(group is None)
         checklist = group.create_child({'name': 'CK', '_parentid': 'XXX'})
         self.assertEqual(type(checklist), model.Checklist)
@@ -138,30 +142,30 @@ class TestModel(unittest.TestCase):
         """ Test permissions """
 
         # user1 cannot view or edit a checklist in a private group
-        checklist = model.search_checklist(self.checklist0)
+        checklist = model.search_element(model.Checklist, self.checklist0)
         self.assertFalse(checklist.visible_by(self.user1))
         self.assertFalse(checklist.editable_by(self.user1))
 
         # user1 can view but not edit a checklist ina public group
-        checklist = model.search_checklist(self.checklist1)
-        self.assertFalse(checklist.parent.info.get('private', False))
+        checklist = model.search_element(model.Checklist, self.checklist1)
+        self.assertFalse(checklist.parent().info.get('private', False))
         self.assertTrue(checklist.visible_by(self.user1))
         self.assertFalse(checklist.editable_by(self.user1))
 
     def test_checklists_edit(self):
         " Change the name of a checklist "
-        checklist = model.search_checklist(self.checklist0)
+        checklist = model.search_element(model.Checklist, self.checklist0)
         self.assertFalse(checklist is None)
         checklist.info['name'] = 'CKNEW'
         self.assertTrue(checklist.save())
 
-        checklist = model.search_checklist(self.checklist0)
+        checklist = model.search_element(model.Checklist, self.checklist0)
         self.assertEqual(checklist.info['name'], 'CKNEW')
 
     def test_checklist_delete(self):
         " Delete a checklist "
-        checklist = model.search_checklist(self.checklist0)
+        checklist = model.search_element(model.Checklist, self.checklist0)
         self.assertFalse(checklist is None)
         self.assertTrue(checklist.delete())
-        checklist = model.search_checklist(self.checklist0)
+        checklist = model.search_element(model.Checklist, self.checklist0)
         self.assertTrue(checklist is None)

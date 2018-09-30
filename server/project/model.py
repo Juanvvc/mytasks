@@ -28,18 +28,18 @@ def configure_model(app):
 
 
 class BaseElement(object):
-    def __init__(self, collection, parent=None, children_class=None):
+    def __init__(self, _id, collection=None, parent_class=None, children_class=None):
         """
-        You must include an _id in the self.info dictionary in your constructor.
 
         Args:
             collection: a db.COLLECTION for this element
-            parent: The BaseElement which contains this one, if any
+            parent_class: The BaseElement which contains this one, if any
+            children_class: The BaseElement this element can contain, if any
         """
-        self.info = dict(_id=None)
-        self.collection = collection
-        self.parent = parent
-        self.children_class = children_class
+        self.info = dict(_id=_id)
+        self._collection = collection
+        self._parent_class = parent_class
+        self._children_class = children_class
 
     def id(self):
         """ A convenience method to get the bson.objectid.ObjectId of this element """
@@ -53,32 +53,39 @@ class BaseElement(object):
         This method shouldn't return any dangerous information: passwords, hashes of passwords...
         Only data intented that can be publicly accessed is returned. """
 
-        summary = dict(
+        return dict(
             _id=str(self.id()),
-            name=self.info.get('name', '')
+            name=self.info.get('name', ''),
+            _parentid=self.info.get('_parentid', None)
         )
 
-        if self.parent is not None:
-            summary.update({'_parentid': self.parent.id()})
-
-        return summary
+    def sane_info(self):
+        """ Returns an info object that can be serialized """
+        new_info = self.info.copy()
+        if '_id' in new_info:
+            new_info['_id'] = str(new_info['_id'])
+        if '_parentid' in new_info:
+            new_info['_parentid'] = str(new_info['_parentid'])
+        return new_info
 
     def save(self):
-        self.collection.save(self.info)
+        self._collection.save(self.info)
         return True
 
     def visible_by(self, user_id):
         """ Returns True if user_id is allowed to access the BaseElement """
-        assert self.parent is not None
-        return self.parent.visible_by(user_id)
+        if self.info.get('_parentid') is not None:
+            return self.parent().visible_by(user_id)
+        return True
 
     def editable_by(self, user_id):
         """ Returns True if the user_id is allowed to edit or remove this BaseElement """
-        assert self.parent is not None
-        return self.parent.editable_by(user_id)
+        if self.info.get('_parentid') is not None:
+            return self.parent().editable_by(user_id)
+        return True
 
     def delete(self):
-        self.collection.remove({'_id': self.id()})
+        self._collection.remove({'_id': self.id()})
         return True
 
     def create_child(self, info):
@@ -86,28 +93,34 @@ class BaseElement(object):
 
         If info includes a _parentid, it is ignored
         """
-        if self.children_class is None:
+        if self._children_class is None:
             raise Exception('This element type cannot have children')
-        new_child = self.children_class(self, None)
+        new_child = self._children_class(None)
         # update the info and save
         new_child.info.update(info)
         new_child.info.update({'_parentid': self.id()})
         new_child.save()
         return new_child
 
+    def parent(self):
+        if hasattr(self, '_parent') and self._parent is not None:
+            return self._parent
+        if '_parentid' not in self.info or not hasattr(self, '_parent_class'):
+            return None
+        return search_element(self._parent_class, self.info.get('_parentid'))
+
 
 class User(BaseElement):
-    def __init__(self, id):
-        super().__init__(db.users)
-        if id is None:
+    def __init__(self, _id):
+        super().__init__(_id, collection=db.users, children_class=Group)
+        if _id is None:
             # create a new user
-            id = db.users.insert_one({}).inserted_id
+            _id = db.users.insert_one({}).inserted_id
 
-        new_info = db.users.find_one({'_id': id})
+        new_info = db.users.find_one({'_id': _id})
         if new_info is None:
-            raise Exception('User not found: {}'.format(id))
+            raise Exception('User not found: {}'.format(_id))
         self.info.update(new_info)
-        self.children_class = Group
 
     def hash_password(self, password):
         """ Save a password hash in the user.
@@ -118,7 +131,7 @@ class User(BaseElement):
         self.info[PASSWORD_FIELDNAME] = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     def verify_password(self, password):
-        """ Returns True if the password is verifiedself.
+        """ Returns True if the password is verified.
 
         If the user does not have a password hash, it is never verified. """
         if PASSWORD_FIELDNAME in self.info:
@@ -133,27 +146,26 @@ class User(BaseElement):
 
 class Group(BaseElement):
     """ Groups are private unless explicitely configured as non private """
-    def __init__(self, user, id):
-        super().__init__(db.groups, parent=user)
-        assert type(user) == User
-        if id is None:
+    def __init__(self, _id):
+        super().__init__(_id, collection=db.groups, children_class=Checklist, parent_class=User)
+        if _id is None:
             # create a new group
-            id = db.groups.insert_one({'_parentid': user.id(), 'private': True}).inserted_id
+            _id = db.groups.insert_one({'private': True}).inserted_id
 
-        new_info = db.groups.find_one({'_id': id})
+        new_info = db.groups.find_one({'_id': _id})
         if new_info is None:
-            raise Exception('Group not found: {}'.format(id))
+            raise Exception('Group not found: {}'.format(_id))
         self.info.update(new_info)
-        self.children_class = Checklist
 
     def summary(self):
         return super().summary().update({'private': self.info.get('private', True)})
 
     def visible_by(self, user_id):
         """ Returns True if user_id is allowed to access the group """
-        assert self.parent is not None
+        my_user = self.parent()
+        assert my_user is not None
         # a user can access its own groups always
-        if str(user_id) == str(self.parent.id()):
+        if str(user_id) == str(my_user.id()):
             return True
         # a different user can access only to non private groups
         return not self.info.get('private', True)
@@ -161,36 +173,56 @@ class Group(BaseElement):
     def editable_by(self, user_id):
         """ Returns True if the user_id is allowed to edit or remove this group """
         # only owners can edit or remove groups
-        assert self.parent is not None
-        return str(self.parent.id()) == str(user_id)
+        my_user = self.parent()
+        assert my_user is not None
+        return str(my_user.id()) == str(user_id)
 
 
 class Checklist(BaseElement):
-    def __init__(self, group, id):
-        super().__init__(db.checklists, parent=group)
-        assert type(group) == Group
-        if id is None:
+    def __init__(self, _id):
+        super().__init__(_id, collection=db.checklists, parent_class=Group, children_class=Item)
+        if _id is None:
             # create a new checklist
-            id = db.checklists.insert_one({'_parentid': group.id()}).inserted_id
+            _id = db.checklists.insert_one({}).inserted_id
 
-        new_info = db.checklists.find_one({'_id': id})
+        new_info = db.checklists.find_one({'_id': _id})
         if new_info is None:
-            raise Exception('Checklist not found: {}'.format(id))
+            raise Exception('Checklist not found: {}'.format(_id))
         self.info.update(new_info)
-        self.children_class = Item
+
+    def delete_child(self, item_id):
+        if 'items' not in self.info:
+            return False
+        item_pos = -1
+        for i in range(0, len(self.info['items'])):
+            if str(self.info['items'][i]['_id']) == str(item_id):
+                item_pos = i
+                break
+        if item_pos == -1:
+            return False
+        self.info['items'].pop(item_pos)
+        return True
+
+    def create_child(self, info):
+        child = super().create_child(info)
+        if 'items' not in self.info:
+            self.info['items'] = list([dict(_id=child.id())])
+        else:
+            self.info['items'].append(dict(_id=child.id()))
+        self.save()
+        return child
 
 
 class Item(BaseElement):
-    def __init__(self, checklist, id):
-        super().__init__(db.items, parent=checklist)
-        assert type(checklist) == Checklist
-        if id is None:
+    def __init__(self, _id):
+        super().__init__(_id, collection=db.items, parent_class=Checklist)
+        if _id is None:
             # create a new checklist
-            id = db.items.insert_one({'_parentid': checklist.id()}).inserted_id
+            _id = db.items.insert_one({}).inserted_id
 
-        new_info = db.items.find_one({'_id': id})
+        new_info = db.items.find_one({'_id': _id})
         if new_info is None:
-            raise Exception('Item not found: {}'.format(id))
+            raise Exception('Item not found: {}'.format(_id))
         self.info.update(new_info)
 
 
@@ -246,72 +278,39 @@ def create_user(name, password=None):
     return user
 
 
-def search_user(userid):
-    if type(userid) == str:
+def search_element(element_class, element_id):
+    """ Search for a generic element
+
+    Attr:
+        element_class: the class of the element to search. Currently: User, Group, Checklist, Item
+        element_id: the identifier of the element to search
+
+    Returns:
+        The element, or None if it doesn't exist.
+    """
+    if type(element_id) == str:
         try:
-            userid = ObjectId(userid)
+            element_id = ObjectId(element_id)
         except InvalidId:
-            logger.warn('Invalid user_id: %s', userid)
+            logger.warn('Invalid Identifier: %s', element_id)
             return None
     try:
-        return User(userid)
+        return element_class(element_id)
     except Exception as exc:
-        logger.warn('Something happened constructing the user %s: %s', userid, str(exc))
         return None
 
 
 def search_username(name):
-    """ Gets a user, if exists.
+    """ Gets a user by its username, if exists.
 
     Args:
         user_id (int): The identifier of the user
+
+    Returns:
+        The User, or None if it doesn't exist.
     """
     userinfo = db.users.find_one({'name': name})
     if userinfo is None:
         logger.warn('User not found: %s', name)
         return None
     return User(userinfo['_id'])
-
-
-def search_group(groupid):
-    if type(groupid) == str:
-        try:
-            groupid = ObjectId(groupid)
-        except InvalidId:
-            logger.warn('Invalid group_id: %s', groupid)
-            return None
-    groupinfo = db.groups.find_one({'_id': groupid})
-    if groupinfo is None:
-        logger.warn('Group not found: %s', groupid)
-        return None
-    user = search_user(groupinfo['_parentid'])
-    if user is None:
-        logger.warn('Group found, but user doesn\'t: %s', groupid)
-        return None
-    try:
-        return Group(user, groupid)
-    except Exception as exc:
-        logger.warn('Something happened constructing the group %s: %s', groupid, str(exc))
-        return None
-
-
-def search_checklist(checklistid):
-    if type(checklistid) == str:
-        try:
-            checklistid = ObjectId(checklistid)
-        except InvalidId:
-            logger.warn('Invalid checklist_id: %s', checklistid)
-            return None
-    checklistinfo = db.checklists.find_one({'_id': checklistid})
-    if checklistinfo is None:
-        logger.warn('Checklist not found: %s', checklistid)
-        return None
-    group = search_group(checklistinfo['_parentid'])
-    if group is None:
-        logger.warn('Checklist found, but group doesn\'t: %s', checklistid)
-        return None
-    try:
-        return Checklist(group, checklistid)
-    except Exception as exc:
-        logger.warn('Something happened constructing the checklist %s: %s', checklistid, str(exc))
-        return None
