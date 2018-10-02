@@ -1,7 +1,7 @@
 const axios = require('axios')
 
-export default class {
-    constructor(auth, authCallback) {
+class MyTasks {
+    constructor () {
         // load the server from the window, it is exits.
         // this way we can deploy the application without recompiling
         if(window !== undefined && window.MYTASKS_SERVER !== undefined) {
@@ -9,7 +9,9 @@ export default class {
         } else {
             this.base_url = "http://127.0.0.1:5000"
         }
+    }
 
+    setAuth(auth, authCallback) {
         this.auth = auth
         this.authCallback = authCallback
     }
@@ -38,6 +40,18 @@ export default class {
         })
     }
 
+    put(url, data) {
+        if(!url.startsWith('http')) {
+            url = `${this.base_url}${url}`
+        }
+        console.log(`PUT ${url}`)
+        return axios.put(url, data, {auth: this.auth}).catch(error => {
+            if(error.response && error.response.status === 401 && this.authCallback !== undefined) {
+                this.authCallback()
+            }
+        })
+    }
+
     delete(url) {
         if(!url.startsWith('http')) {
             url = `${this.base_url}${url}`
@@ -54,3 +68,7 @@ export default class {
         return axios.get(`${this.base_url}/login`, {auth: auth})
     }
 }
+
+var client = new MyTasks()
+
+export default client

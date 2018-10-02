@@ -64,7 +64,7 @@
 
 <script>
 
-import MyTasksClient from '@/libs/mytasksclient.js'
+import mytasks from '@/libs/mytasksclient.js'
 
 export default {
   data: () => ({
@@ -79,7 +79,6 @@ export default {
 
   methods: {
     login() {
-      var mytasks = new MyTasksClient()
       mytasks.login({username: this.username, password: this.password}).then( response => {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)

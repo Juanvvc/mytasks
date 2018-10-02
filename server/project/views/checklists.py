@@ -54,8 +54,11 @@ def single_checklist(_id):
     if 'items' in info:
         for item in info['items']:
             real_item = model.search_element(model.Item, item['_id'])
-            item_info = real_item.sane_info()
-            item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
+            if real_item is None:
+                item_info = dict(name='NOT FOUND: %s'.format(str(item['_id'])))
+            else:
+                item_info = real_item.sane_info()
+                item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
             new_items.append(item_info)
         info['items'] = new_items
 

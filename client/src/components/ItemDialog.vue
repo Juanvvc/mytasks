@@ -8,6 +8,7 @@
               label="Name"
               placeholder="Name"
               v-model="name"
+              clearable
               hint="Start with # to convert to a section."
               @keyup.enter="click(true)"
               prepend-icon="translate" />
@@ -36,6 +37,7 @@
                   label="Due date"
                   persistent-hint
                   prepend-icon="event"
+                  clearable
                 ></v-text-field>
                 <v-date-picker
                   v-model="due_date"
@@ -47,11 +49,11 @@
            </v-layout>
 
            <v-card-actions>
-             <v-btn color="primary darken-1" flat @click="click(true)">OK</v-btn>
-             <v-btn color="primary darken-1" flat @click="click(false)">Cancel</v-btn>
-             <v-spacer></v-spacer>
              <!-- Setting to name to empy will delet the item. TODO: look for a nicer way to do this -->
              <v-btn color="warning darken-1" flat @click="name=''; click(true)">Delete</v-btn>
+             <v-spacer></v-spacer>
+             <v-btn color="primary darken-1" flat @click="click(false)">Cancel</v-btn>
+             <v-btn color="primary darken-1" flat @click="click(true)">Save</v-btn>
            </v-card-actions>
        </v-card>
    </v-dialog>
@@ -88,9 +90,9 @@ export default {
 
       if(result && this.resolve !== undefined) {
         this.resolve({
-          name: this.name.trim(),
-          comment: this.comment.trim(),
-          due_date: this.due_date.trim()
+          name: (this.name!==null?this.name.trim():''),
+          comment: (this.comment!==null?this.comment.trim():''),
+          due_date: (this.due_date!==null?this.due_date.trim():'')
         })
         this.name = ''
         this.comment = ''
