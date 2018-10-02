@@ -67,8 +67,6 @@
 import MyTasksClient from '@/libs/mytasksclient.js'
 
 export default {
-  name: 'home',
-
   data: () => ({
     username: '',
     password: '',
@@ -95,7 +93,7 @@ export default {
             sessionStorage.setItem('token', response.data.token)
             sessionStorage.setItem('useruri', response.data.uri)
           }
-          this.$router.push({ name: 'home' })
+          this.$router.push({ name: 'user' })
         }
       }).catch( () => {
         this.$emit('showError', 'Cannot login to MyTasks')

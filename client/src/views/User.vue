@@ -73,7 +73,6 @@
         ></v-text-field>
 
       </v-list>
-      <v-input />
     </v-navigation-drawer>
 
     <!--  Title and toolbar !-->
@@ -120,7 +119,6 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MyTasksClient from '@/libs/mytasksclient.js'
 
 export default {
-  name: 'home',
   components: {
     CheckList,
     ConfirmDialog

@@ -40,7 +40,7 @@ export default class {
 
     delete(url) {
         if(!url.startsWith('http')) {
-            url = `${Mthis.base_url}${url}`
+            url = `${this.base_url}${url}`
         }
         console.log(`DELETE ${url}`)
         return axios.delete(url, {auth: this.auth}).catch(error => {
