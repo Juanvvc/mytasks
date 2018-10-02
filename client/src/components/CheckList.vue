@@ -5,15 +5,6 @@
     <v-flex xs12 sm10 offset-sm1>
       <div v-if="checklist !== undefined && checklist !== null">
         <v-card >
-          <!--v-img src="toolbar.jpg"  max-height="80px">
-            <v-container fill-height fluid>
-              <v-layout fill-height>
-                <v-flex xs12 align-end flexbox>
-                  <span class="white--text headline">{{checklist.name}}</span>
-                </v-flex>
-              </v-layout>
-            </v-container>
-          </v-img-->
           <v-toolbar card prominent color="secondary" class="checklist-header">
             <!-- name -->
             <v-toolbar-title class="body-2">
@@ -29,19 +20,19 @@
                :items="availableGroups"
                item-text="name"
                item-value="_id"
-               @change="$emit('changeChecklistGroup', group._id, checklist._parentid)"
+               @change="moveChecklist(checklist._parentid)"
                >
               </v-select>
             </v-flex>
             <!-- toggles -->
             <v-tooltip bottom>
-              <v-btn slot="activator" :dark="!checklist.hide_done_items" icon @click="$emit('changeMetadata', {hide_done_items: !checklist.hide_done_items})">
+              <v-btn slot="activator" :dark="!checklist.hide_done_items" icon @click="updateChecklist({hide_done_items: !checklist.hide_done_items})">
                 <v-icon>done_outline</v-icon>
               </v-btn>
               <span>Show/hide done items</span>
             </v-tooltip>
             <v-tooltip bottom>
-              <v-btn slot="activator" :dark="!checklist.hide_done_date" icon @click="$emit('changeMetadata', {hide_done_date: !checklist.hide_done_date})">
+              <v-btn slot="activator" :dark="!checklist.hide_done_date" icon @click="updateChecklist({hide_done_date: !checklist.hide_done_date})">
                 <v-icon>today</v-icon>
               </v-btn>
               <span>Show/hide done dates in items</span>
@@ -57,9 +48,9 @@
               </v-btn>
 
               <v-list>
-                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('duplicateChecklist', checklist)">Duplicate checklist</v-list-tile-title></v-list-tile>
+                <v-list-tile class="pointable"><v-list-tile-title @click="duplicateChecklist">Duplicate checklist</v-list-tile-title></v-list-tile>
                 <v-list-tile class="pointable"><v-list-tile-title @click="clearChecklist">Remove done items</v-list-tile-title></v-list-tile>
-                <v-list-tile class="pointable"><v-list-tile-title @click="$emit('deleteChecklist', checklist)">Delete checklist</v-list-tile-title></v-list-tile>
+                <v-list-tile class="pointable"><v-list-tile-title @click="deleteChecklist">Delete checklist</v-list-tile-title></v-list-tile>
               </v-list>
             </v-menu>
           </v-toolbar>
@@ -76,7 +67,7 @@
                 <!-- normal items -->
                 <v-list-tile
                   v-if="!item.checked || !checklist.hide_done_items"
-                  v-for="(item, index) in checklist.items"
+                  v-for="item in checklist.items"
                   :key="item.name"
                   avatar
                   class="pointable">
@@ -119,8 +110,7 @@
         <v-card>
           <v-toolbar card prominent color="secondary" class="checklist-header">
             <v-toolbar-title class="body-2">
-              <span class="white--text headline" v-if="group !== null">No checklist selected in group "{{ group.name }}"</span>
-              <span class="white--text headline" v-else>No group or checklist selected</span>
+              <span class="white--text headline">No checklist selected</span>
             </v-toolbar-title>
           </v-toolbar>
         </v-card>
@@ -149,10 +139,6 @@ export default {
 
   props: {
     checklistId: {
-      mandatory: true
-    },
-    group: {
-      type: Object,
       mandatory: true
     },
     availableGroups: {
@@ -194,14 +180,36 @@ export default {
       })
     },
 
+    duplicateChecklist() {
+      /* Duplicates current checklist. */
+      if(this.checklist === null) {
+        this.$emit('showError', 'No active checklist')
+      }
+      mytasks.post(`/checklists/${this.checklist._id}/duplicate`).then( response => {
+        this.$emit('checklistDuplicated', response.data)
+      }).catch( error => {
+        this.$emit('showError', error)
+      })
+    },
+
+    deleteChecklist() {
+      this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
+        if(!confirm) {
+          return
+        }
+        mytasks.delete(this.checklist.uri).then(() => {
+          this.$emit('checklistDeleted')
+        }).catch( error => {
+          this.$emit('showError', error)
+        })
+      })
+    },
+
     updateChecklist(newData) {
       // updates the information of the checklist with new data
-      mytasks.post(`/checklists/${this.checklistId}`, newData).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.activeChecklist = response.data
-        }
+      return mytasks.post(`/checklists/${this.checklistId}`, newData).then(response => {
+        this.checklist = response.data
+        return response
       }).catch( error => {
         this.$emit('showError', error)
       })
@@ -213,30 +221,22 @@ export default {
         _parentid: this.checklistId
       }
       mytasks.post('/items/', newItemInfo).then( response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
+        if(this.checklist.items === null || this.checklist.items === undefined) {
+          this.checklist.items = [response.data]
         } else {
-          if(this.checklist.items === null || this.checklist.items === undefined) {
-            this.checklist.items = [response.data]
-          } else {
-            this.checklist.items.push(response.data)
-          }
+          this.checklist.items.push(response.data)
         }
       })
       this.newItemName = ''
     },
 
     updateItem(item, newItemData) {
-      mytasks.put(item.uri, newItemData).then(response => {
-        if(response.data.error_message !== undefined ) {
-          this.$emit('showError', response.data.message)
-        } else {
-          this.$set(item, 'checked', response.data.checked)
-          this.$set(item, 'name', response.data.name)
-          this.$set(item, 'comment', response.data.comment)
-          this.$set(item, 'done_date', response.data.done_date)
-          this.$set(item, 'due_date', response.data.due_date)
-        }
+      mytasks.post(item.uri, newItemData).then(response => {
+        this.$set(item, 'checked', response.data.checked)
+        this.$set(item, 'name', response.data.name)
+        this.$set(item, 'comment', response.data.comment)
+        this.$set(item, 'done_date', response.data.done_date)
+        this.$set(item, 'due_date', response.data.due_date)
       })
     },
 
@@ -251,10 +251,17 @@ export default {
 
     deleteItem(item) {
       mytasks.delete(item.uri).then(response => {
-        if(response.data.error_message !== undefined ) {
-          this.$emit('showError', response.data.message)
-        } else {
-          // TODO: pop the item from the checklist
+        if(response.data.status === 200) {
+          let oldItemPos = -1
+          for(let i=0; i<=this.checklist.items.length; i++) {
+            if(this.checklist.items[i]._id === item._id) {
+              oldItemPos = i
+              break
+            }
+          }
+          if(oldItemPos !== -1) {
+            this.$delete(this.checklist.items, oldItemPos)
+          }
         }
       })
     },
@@ -263,15 +270,19 @@ export default {
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist to clear')
       }
-      this.$refs.confirmDialog.confirm({title: `Clear list "${this.checklist.name}"?`, message: "Clearing a list removes all items done", yes: 'Clear'}).then( confirm => {
+      this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'}).then( confirm => {
         if(!confirm) {
           return
         }
-        for(var i=0; i<this.checklist.items.length; i++) {
-          if(this.checklist.items[i].checked) {
-            this.deleteItem(this.checklist.items[i])
-          }
-        }
+        mytasks.post(`/checklists/${this.checklist._id}/clear`).then( response => {
+          this.checklist = response.data
+        })
+      })
+    },
+
+    moveChecklist(toGroupId) {
+      this.updateChecklist({_parentid: toGroupId}).then( () => {
+        this.$emit('checklistMoved', this.checklist, toGroupId)
       })
     },
 

@@ -142,15 +142,16 @@ class TestItemsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 404)
             data = http.delete(url)
             self.assertEqual(data.get('status', 0), 404)
+            # check item3 also does not exist in the checklist
+            url = flask.url_for('checklists.info', _id=str(self.checklist2.id()))
+            data = http.get(url)
+            self.assertEqual(len(data['items']), 0)
 
             # non existing checklist
             url = flask.url_for('checklists.info', _id='XXX')
             data = http.delete(url)
             self.assertTrue('error_message' in data)
             self.assertEqual(data.get('status', 0), 404)
-
-
-
 
 
 if __name__ == '__main__':

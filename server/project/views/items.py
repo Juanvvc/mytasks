@@ -80,8 +80,10 @@ def delete_item(_id):
     # delete the item from the checklist
     if '_parentid' in item.info:
         checklist = model.search_element(model.Checklist, item.info['_parentid'])
-        if not checklist.delete_child(_id):
-            flask.current_app.logger.error('Item %s not found in checklist', _id)
+        if checklist is None:
+            flask.current_app.logger.error('Removing Item %s and checklist not found', _id)
+        elif not checklist.delete_child(_id):
+            flask.current_app.logger.error('Cannot remove Item %s from checklist %s', _id, checklist.id())
     else:
         flask.current_app.logger.error('Item %s doesn\'t belong to a checklist', _id)
 

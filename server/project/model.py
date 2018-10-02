@@ -43,9 +43,11 @@ class BaseElement(object):
 
     def id(self):
         """ A convenience method to get the bson.objectid.ObjectId of this element """
-        if '_id' not in self.info:
+        _id = self.info.get('_id', None)
+        if '_id' is None:
             raise Exception('Somehow, the element has no identifier')
-        return self.info['_id']
+        assert type(_id) == ObjectId
+        return _id
 
     def summary(self):
         """ Returns the summary of the element.
@@ -69,6 +71,14 @@ class BaseElement(object):
         return new_info
 
     def save(self):
+        # before saving, make sure the identifiers are really identifiers
+        try:
+            if type(self.info['_id']) != ObjectId:
+                self.info['_id'] = ObjectId(self.info['_id'])
+            if '_parentid' in self.info and type(self.info['_parentid']) != ObjectId:
+                self.info['_parentid'] = ObjectId(self.info['_parentid'])
+        except InvalidId:
+            return False
         self._collection.save(self.info)
         return True
 
@@ -91,19 +101,28 @@ class BaseElement(object):
     def create_child(self, info):
         """ Creates a new chil in this element
 
-        If info includes a _parentid, it is ignored
+        If info includes an _id or a _parentid, it is ignored
         """
         if self._children_class is None:
             raise Exception('This element type cannot have children')
         new_child = self._children_class(None)
+
+        # ignore these fields, if exist
+        new_info = info.copy()
+        new_info.pop('_id', None)
+        new_info.pop('_parentid', None)
+
         # update the info and save
-        new_child.info.update(info)
+        new_child.info.update(new_info)
         new_child.info.update({'_parentid': self.id()})
         new_child.save()
         return new_child
 
-    def parent(self):
-        if hasattr(self, '_parent') and self._parent is not None:
+    def parent(self, use_cached=True):
+        """ Returns a BaseElement with the parent, if anyself.
+
+        This method caches the first call to avoid requests to the database """
+        if use_cached and hasattr(self, '_parent') and self._parent is not None:
             return self._parent
         if '_parentid' not in self.info or not hasattr(self, '_parent_class'):
             return None
@@ -201,7 +220,7 @@ class Checklist(BaseElement):
         if item_pos == -1:
             return False
         self.info['items'].pop(item_pos)
-        return True
+        return self.save()
 
     def create_child(self, info):
         child = super().create_child(info)

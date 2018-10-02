@@ -1,5 +1,7 @@
 import flask
 import project.model as model
+from bson.objectid import ObjectId
+from bson.errors import InvalidId
 
 
 def get_blueprint(auth=None):
@@ -8,6 +10,8 @@ def get_blueprint(auth=None):
     blueprint.add_url_rule('/checklists/<_id>', view_func=auth.login_required(single_checklist), methods=['GET'], endpoint='info')
     blueprint.add_url_rule('/checklists/<_id>', view_func=auth.login_required(update_checklist), methods=['POST', 'PUT'], endpoint='update')
     blueprint.add_url_rule('/checklists/<_id>', view_func=auth.login_required(delete_checklist), methods=['DELETE'], endpoint='delete')
+    blueprint.add_url_rule('/checklists/<_id>/clear', view_func=auth.login_required(clear_checklist), methods=['POST'], endpoint='clear')
+    blueprint.add_url_rule('/checklists/<_id>/duplicate', view_func=auth.login_required(duplicate_checklist), methods=['POST'], endpoint='duplicate')
     return blueprint
 
 
@@ -55,7 +59,7 @@ def single_checklist(_id):
         for item in info['items']:
             real_item = model.search_element(model.Item, item['_id'])
             if real_item is None:
-                item_info = dict(name='NOT FOUND: %s'.format(str(item['_id'])))
+                item_info = dict(name='NOT FOUND: {}'.format(str(item['_id'])), _id=str(item['_id']))
             else:
                 item_info = real_item.sane_info()
                 item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
@@ -78,11 +82,15 @@ def update_checklist(_id):
         flask.abort(400, 'No information')
 
     # is an array of items is passed, update only the Item IDs
-    if 'items' in new_info:
-        new_items = []
-        for item in new_info['items']:
-            new_items.append(dict(_id=item['_id']))
-        new_info['items'] = new_items
+    try:
+        if 'items' in new_info:
+            new_items = []
+            for item in new_info['items']:
+                new_items.append(dict(_id=ObjectId(item['_id'])))
+            new_info['items'] = new_items
+    except InvalidId:
+        flask.abort(400, 'Invalid indentifiers in the items array')
+
     checklist.info.update(new_info)
 
     if(checklist.save()):
@@ -106,3 +114,55 @@ def delete_checklist(_id):
         return flask.jsonify({'status': 200, 'message': 'Checklist {} deleted'.format(_id)})
     else:
         flask.abort(500, 'Error while deleting checklist')
+
+
+def clear_checklist(_id):
+    """ Remove all done items """
+    checklist = model.search_element(model.Checklist, _id)
+    # check the checklist exists and it is editable by the current user
+    if checklist is None:
+        flask.abort(404, 'Checklist not found')
+    if not checklist.editable_by(flask.g.user_id):
+        flask.abort(401, 'You are not allowed to edit this checklist')
+
+    new_items = list()
+    # remove all done items
+    model.db.items.remove({'_parentid': checklist.id(), 'checked': True})
+    for item in checklist.info.get('items', []):
+        # check if the items in the array still exist
+        if model.db.items.find_one({'_id': item['_id']}):
+            new_items.push(item)
+    checklist.info['items'] = new_items
+    checklist.save()
+    return single_checklist(_id)
+
+
+def duplicate_checklist(_id):
+    """ Duplicates a checklist """
+    checklist = model.search_element(model.Checklist, _id)
+    # check the checklist exists and it is editable by the current user
+    if checklist is None:
+        flask.abort(404, 'Checklist not found')
+    if not checklist.editable_by(flask.g.user_id):
+        flask.abort(401, 'You are not allowed to edit this checklist')
+
+    new_info = checklist.info.copy()
+
+    # ignore these fields, if exist
+    new_info.pop('_id', None)
+    new_info.pop('items', None)
+
+    # duplicate the checklist and its items
+    new_checklist = checklist.parent().create_child(new_info)
+    for item in checklist.info.get('items', []):
+        new_item = model.search_element(model.Item, item['_id'])
+        import pprint
+        pprint.pprint(new_item)
+        if new_item is not None:
+            new_checklist.create_child(new_item.info)
+
+    # save and return the new checklist
+    if(new_checklist.save()):
+        return single_checklist(checklist.id())
+    else:
+        flask.abort(500, 'Error while saving new checklist')

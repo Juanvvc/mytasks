@@ -94,11 +94,10 @@
     <v-content>
       <check-list
         :checklist-id="activeChecklistId"
-        :group="activeGroup"
         :available-groups="groups"
-        @deleteChecklist="deleteChecklist"
-        @changeChecklistGroup="changeChecklistGroup"
-        @duplicateChecklist="duplicateChecklist"
+        @checklistDeleted="loadGroup(activeGroup._id)"
+        @checklistMoved="checklistMoved"
+        @checklistDuplicated="checklistDuplicated"
         @showError="$emit('showError', $event)"
         />
     </v-content>
@@ -144,6 +143,9 @@ export default {
     }
 
     if(token !== null && useruri !== null) {
+      mytasks.onError(message => {
+        this.$emit('showError', message)
+      })
       // create the authentication object and the callback in case of error
       mytasks.setAuth({username: token, password: ''}, () => {
         // callback in case of auth error: just call login
@@ -166,13 +168,11 @@ export default {
       if(this.groups === null) {
         return null
       }
-      console.log(this.groups.length)
       for(let i=0; i<this.groups.length; i++) {
         let g = this.groups[i]
         if(g._id === groupId) {
           return g
         }
-        console.log(`${g._id}: ${groupId}`)
       }
       return null
     },
@@ -180,13 +180,9 @@ export default {
     loadUser(useruri) {
       // loads a user from its uri
       mytasks.get(useruri).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.activeUser = response.data
-          this.groups = response.data.groups
-        }
-      }).catch( error => {
+        this.activeUser = response.data
+        this.groups = response.data.groups
+      }, error => {
         this.$emit('showError', error)
       })
     },
@@ -194,25 +190,21 @@ export default {
     loadGroup(groupId, checklistId) {
       /* get data about a group from the server, and set it as active.
 
-      If a checklistIf is passed, load also the chccklist */
+      If a checklistIf is passed, load also the checklist */
       mytasks.get(`/groups/${groupId}`).then( response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          for(var i=0; i<this.groups.length; i++) {
-            if(this.groups[i]._id === groupId) {
-              // set data
-              this.$set(this.groups, i, response.data)
+        for(var i=0; i<this.groups.length; i++) {
+          if(this.groups[i]._id === groupId) {
+            // set data
+            this.groups[i] = response.data
 
-              // we must set this because it is set in the v-list v-model
-              this.groups[i]._active = true
+            // we must set this because it is set in the v-list v-model
+            this.groups[i]._active = true
 
-              // set activegroup
-              this.activeGroup = this.groups[i]
-              this.activeChecklistId = checklistId
-            } else {
-              this.groups[i].active = false
-            }
+            // set activegroup
+            this.activeGroup = this.groups[i]
+            this.activeChecklistId = checklistId
+          } else {
+            this.groups[i].active = false
           }
         }
       }).catch( error => {
@@ -227,12 +219,8 @@ export default {
         description: '',
         checklists: []
       }).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.groups.push(response.data)
-        }
-      }).catch( error => {
+        this.groups.push(response.data)
+      }, error => {
         this.$emit('showError', error)
       })
     },
@@ -294,76 +282,16 @@ export default {
       })
     },
 
-    deleteChecklist(checklist) {
-      this.$refs.confirmDialog.confirm({title: `Delete checklist "${checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
-        if(!confirm) {
-          return
-        }
-        mytasks.delete(checklist.uri).then(response => {
-          if(response.data.error_message !== undefined) {
-            this.$emit('showError', response.data.error_message)
-          } else if (checklist._parentid === this.activeGroup._id) {
-            this.loadGroup(this.activeGroup._id)
-          }
-        }).catch( error => {
-          this.$emit('showError', error)
-        })
-      })
+    checklistDuplicated(newChecklist) {
+      this.loadGroup(this.activeGroup._id, newChecklist._id)
     },
 
-    changeChecklistGroup(fromGroupId, toGroupId) {
-      /* Change activeChecklist fromGroupId toGroupId. Activate the new group and checklist */
-      if(fromGroupId === toGroupId || this.activeChecklist === null) {
-        return
-      }
-      var newData = {
-        name: this.activeChecklist.name,
-        description: this.activeChecklist.description,
-        _parentid: toGroupId,
-        items: this.activeChecklist.items
-      }
-      // create a new checklist in toGroup with this data
-      mytasks.post(`/checklists/`, newData).then( response => {
-        if(response.data.errorMessage !== undefined) {
-          this.$emit('showError', response.data.errorMessage)
-        } else {
-          // remove the old checklist
-          mytasks.delete(this.activeChecklist.uri).then(response => {
-            if(response.data.status !== 200) {
-              this.$emit('Cannot delete old checklist: ' + response.data.showError)
-            }
-          })
-          // load the group and checklist
-          this.loadGroup(toGroupId, response.data._id)
-        }
-      }).catch( error => {
-        this.$emit('showError', error)
-      })
+    checklistDeleted() {
+      this.loadGroup(this.activeGroup._id)
     },
 
-    duplicateChecklist(checklist) {
-      /* Duplicates a checklist in the current group.
-
-      The new checklist is actived */
-      if(this.activeGroup === null) {
-        this.$emit('showError', 'No active group')
-      }
-      var newData = {
-        name: checklist.name,
-        description: checklist.description,
-        items: checklist.items,
-        _parentid: this.activeGroup._id
-      }
-      mytasks.post('/checklists/', newData).then( response => {
-        if(response.data.errorMessage !== undefined) {
-          this.$emit('showError', response.data.errorMessage)
-        } else {
-          // load the group and the new checklist
-          this.loadGroup(this.activeGroup._id, response.data._id)
-        }
-      }).catch( error => {
-        this.$emit('showError', error)
-      })
+    checklistMoved(checklist, toGroupId) {
+      this.loadGroup(toGroupId, checklist._id)
     },
 
     logout() {

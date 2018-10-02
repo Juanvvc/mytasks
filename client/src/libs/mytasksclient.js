@@ -11,6 +11,28 @@ class MyTasks {
         }
     }
 
+    onError(errorCallback) {
+        this.errorCallback = errorCallback
+    }
+
+    manageError(error) {
+        if(error.response) {
+            if(error.response.status === 401 && this.authCallback !== undefined) {
+                this.authCallback()
+            } else if(this.errorCallback !== undefined){
+                this.errorCallback(error.response.message)
+            } else {
+                throw error
+            }
+        } else {
+            if(this.errorCallback !== undefined ) {
+                this.errorCallback('Unknown error connecting to the server')
+            } else {
+                throw error
+            }
+        }
+    }
+
     setAuth(auth, authCallback) {
         this.auth = auth
         this.authCallback = authCallback
@@ -21,10 +43,14 @@ class MyTasks {
             url = `${this.base_url}${url}`
         }
         console.log(`GET ${url}`)
-        return axios.get(url, {auth: this.auth}).catch(error => {
-            if(error.response && error.response.status === 401 && this.authCallback !== undefined) {
-                this.authCallback()
+        return axios.get(url, {auth: this.auth}).then(response =>{
+            if(response.error_message !== undefined) {
+                throw new Error(response)
+            } else {
+                return response
             }
+        }, error => {
+            this.manageError(error)
         })
     }
 
@@ -33,22 +59,14 @@ class MyTasks {
             url = `${this.base_url}${url}`
         }
         console.log(`POST ${url}`)
-        return axios.post(url, data, {auth: this.auth}).catch(error => {
-            if(error.response && error.response.status === 401 && this.authCallback !== undefined) {
-                this.authCallback()
+        return axios.post(url, data, {auth: this.auth}).then(response =>{
+            if(response.error_message !== undefined) {
+                throw new Error(response)
+            } else {
+                return response
             }
-        })
-    }
-
-    put(url, data) {
-        if(!url.startsWith('http')) {
-            url = `${this.base_url}${url}`
-        }
-        console.log(`PUT ${url}`)
-        return axios.put(url, data, {auth: this.auth}).catch(error => {
-            if(error.response && error.response.status === 401 && this.authCallback !== undefined) {
-                this.authCallback()
-            }
+        }, error => {
+            this.manageError(error)
         })
     }
 
@@ -57,10 +75,14 @@ class MyTasks {
             url = `${this.base_url}${url}`
         }
         console.log(`DELETE ${url}`)
-        return axios.delete(url, {auth: this.auth}).catch(error => {
-            if(error.response && error.response.status === 401 && this.authCallback !== undefined) {
-                this.authCallback()
+        return axios.delete(url, {auth: this.auth}).then(response =>{
+            if(response.error_message !== undefined) {
+                throw new Error(response)
+            } else {
+                return response
             }
+        }, error => {
+            this.manageError(error)
         })
     }
 
