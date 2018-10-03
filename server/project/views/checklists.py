@@ -25,10 +25,13 @@ def new_checklist():
     if name is None:
         flask.abort(400, 'A checklists needs a name')
 
+    # ignore these properties
+    new_info.pop('_id', None)
+
     # check the group
     group_id = new_info.get('_parentid', None)
     if group_id is None:
-        flask.abort(400, 'A checklists needs a name')
+        flask.abort(400, 'A checklists needs a group')
     group = model.search_element(model.Group, group_id)
     if group is None:
         flask.abort(404, 'Group not found')
@@ -57,13 +60,18 @@ def single_checklist(_id):
     new_items = []
     if 'items' in info:
         for item in info['items']:
-            real_item = model.search_element(model.Item, item['_id'])
-            if real_item is None:
-                item_info = dict(name='NOT FOUND: {}'.format(str(item['_id'])), _id=str(item['_id']))
+            if '_id' in item:
+                # assume it is an external item
+                real_item = model.search_element(model.Item, item['_id'])
+                if real_item is None:
+                    item_info = dict(name='NOT FOUND: {}'.format(str(item['_id'])), _id=str(item['_id']))
+                else:
+                    item_info = real_item.sane_info()
+                    item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
+                new_items.append(item_info)
             else:
-                item_info = real_item.sane_info()
-                item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
-            new_items.append(item_info)
+                # item has no _id: assume it is an internal document.
+                new_items.append(item)
         info['items'] = new_items
 
     return flask.jsonify(info)
@@ -115,6 +123,8 @@ def delete_checklist(_id):
     else:
         flask.abort(500, 'Error while deleting checklist')
 
+# --------------------------------------- Actions
+
 
 def clear_checklist(_id):
     """ Remove all done items """
@@ -155,11 +165,16 @@ def duplicate_checklist(_id):
     # duplicate the checklist and its items
     new_checklist = checklist.parent().create_child(new_info)
     for item in checklist.info.get('items', []):
-        new_item = model.search_element(model.Item, item['_id'])
-        import pprint
-        pprint.pprint(new_item)
-        if new_item is not None:
-            new_checklist.create_child(new_item.info)
+        if '_id' in item:
+            # it is an external document: duplicate the item
+            new_item = model.search_element(model.Item, item['_id'])
+            import pprint
+            pprint.pprint(new_item)
+            if new_item is not None:
+                new_checklist.create_child(new_item.info)
+        else:
+            # it is an internal item: create a new external item
+            new_checklist.create_child(item)
 
     # save and return the new checklist
     if(new_checklist.save()):
