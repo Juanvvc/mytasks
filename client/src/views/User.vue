@@ -111,6 +111,7 @@
         @checklistMoved="checklistMoved"
         @checklistDuplicated="checklistDuplicated"
         @showError="$emit('showError', $event)"
+        @showWarning="$emit('showWarning', $event)"
         />
     </v-content>
 

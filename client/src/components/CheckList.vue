@@ -12,33 +12,33 @@
               <span v-else  class="white--text headline"  @dblclick="editName()">{{checklist.name}}</span>
             </v-toolbar-title>
             <v-spacer />
-            <!-- Select group -->
+            <!-- Select group, only if the checklist is editable -->
             <v-flex sm3>
               <v-select
                placeholder="GROUP"
+               v-if="isEditable()"
                v-model="checklist._parentid"
                :items="availableGroups"
                item-text="name"
                item-value="_id"
                @change="moveChecklist(checklist._parentid)"
-               >
-              </v-select>
+               />
             </v-flex>
             <!-- toggles -->
-            <v-tooltip bottom>
+            <v-tooltip bottom v-if="isEditable()">
               <v-btn slot="activator" :dark="!checklist.hide_done_items" icon @click="updateChecklist({hide_done_items: !checklist.hide_done_items})">
                 <v-icon>done_outline</v-icon>
               </v-btn>
               <span>Show/hide done items</span>
             </v-tooltip>
-            <v-tooltip bottom>
+            <v-tooltip bottom v-if="isEditable()">
               <v-btn slot="activator" :dark="!checklist.hide_done_date" icon @click="updateChecklist({hide_done_date: !checklist.hide_done_date})">
                 <v-icon>today</v-icon>
               </v-btn>
               <span>Show/hide done dates in items</span>
             </v-tooltip>
 
-            <v-menu bottom left>
+            <v-menu bottom left v-if="isEditable()">
               <v-btn
                 slot="activator"
                 dark
@@ -63,7 +63,7 @@
             <p v-else @dblclick="editDescription()"><b>No description</b></p>
 
             <v-list>
-              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle'}">
+              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle', disabled: !isEditable()}">
                 <!-- normal items -->
                 <v-list-tile
                   v-if="!item.checked || !checklist.hide_done_items"
@@ -95,12 +95,13 @@
             </v-list>
             <!-- Final row: Add a new item -->
             <v-text-field
-                v-model="newItemName"
-                placeholder="New item"
-                @keyup.enter="newItem(newItemName); newItemName=''"
-                @keyup.escape="newItemName = ''"
-                @blur="newItemName = ''"
-                solo />
+              v-if="isEditable()"
+              v-model="newItemName"
+              placeholder="New item"
+              @keyup.enter="newItem(newItemName); newItemName=''"
+              @keyup.escape="newItemName = ''"
+              @blur="newItemName = ''"
+              solo />
           </v-card-text>
         </v-card>
       </div>
@@ -194,7 +195,9 @@ export default {
     },
 
     deleteChecklist() {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
         if(!confirm) {
@@ -209,7 +212,9 @@ export default {
     },
 
     updateChecklist(newData) {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       // updates the information of the checklist with new data
       return mytasks.post(`/checklists/${this.checklistId}`, newData).then(response => {
@@ -221,7 +226,9 @@ export default {
     },
 
     newItem(name) {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       let newItemInfo = {
         name: name,
@@ -238,8 +245,6 @@ export default {
     },
 
     updateItem(item, newItemData) {
-      if(!this.isEditable()) return
-
       if(item.uri === undefined) {
         this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
         return
@@ -254,8 +259,6 @@ export default {
     },
 
     checkItem(item) {
-      if(!this.isEditable()) return
-
       let today = (new Date()).toISOString().slice(0,10)
       let newItemData = {
         checked: !item.checked,
@@ -265,7 +268,9 @@ export default {
     },
 
     deleteItem(item) {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       if(item.uri === undefined) {
         this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
@@ -287,33 +292,7 @@ export default {
       })
     },
 
-    clearChecklist() {
-      if(!this.isEditable()) return
-
-      if(this.checklist === null) {
-        this.$emit('showError', 'No active checklist to clear')
-      }
-      this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'}).then( confirm => {
-        if(!confirm) {
-          return
-        }
-        mytasks.post(`/checklists/${this.checklist._id}/clear`).then( response => {
-          this.checklist = response.data
-        })
-      })
-    },
-
-    moveChecklist(toGroupId) {
-      if(!this.isEditable()) return
-
-      this.updateChecklist({_parentid: toGroupId}).then( () => {
-        this.$emit('checklistMoved', this.checklist, toGroupId)
-      })
-    },
-
     editItem (item) {
-      if(!this.isEditable()) return
-
       this.$refs.itemDialog.show({
         name: item.name,
         comment: item.comment,
@@ -331,8 +310,38 @@ export default {
       })
     },
 
+    clearChecklist() {
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
+
+      if(this.checklist === null) {
+        this.$emit('showError', 'No active checklist to clear')
+      }
+      this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'}).then( confirm => {
+        if(!confirm) {
+          return
+        }
+        mytasks.post(`/checklists/${this.checklist._id}/clear`).then( response => {
+          this.checklist = response.data
+        })
+      })
+    },
+
+    moveChecklist(toGroupId) {
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
+
+      this.updateChecklist({_parentid: toGroupId}).then( () => {
+        this.$emit('checklistMoved', this.checklist, toGroupId)
+      })
+    },
+
     editDescription () {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       // active the edit description dialog
       this.editingDescription = true
@@ -344,7 +353,9 @@ export default {
     },
 
     saveDescription () {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       // save the new description
       this.updateChecklist({description: this.newDescription.trim()})
@@ -353,7 +364,9 @@ export default {
     },
 
     editName () {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       // active the edit name dialog
       this.editingName = true
@@ -361,7 +374,9 @@ export default {
     },
 
     saveName () {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       // save the new name
       if(this.newName === '') {
@@ -373,7 +388,9 @@ export default {
     },
 
     finishItemDrag() {
-      if(!this.isEditable()) return
+      if(!this.isEditable()){
+        this.$emit('showWarning', 'This checklist cannot be edited')
+      }
 
       this.drag = false
       this.updateChecklist({items: this.checklist.items})

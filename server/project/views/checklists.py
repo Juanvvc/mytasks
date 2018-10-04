@@ -189,12 +189,13 @@ def duplicate_checklist(_id):
 def today_checklist():
     """Gets a special checklist due_date set to a week from today """
 
-    today = datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0, 0)).isoformat()
-    to_date = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()
+    today = datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0, 0)).isoformat()[:10]
+    to_date = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()[:10]
 
     checklist = {
         'name': 'Today',
-        'description': 'Due Items from {} to {}'.format(today[:10], to_date[:10]),
+        'description': 'Due Items from {} to {}'.format(today, to_date),
+        'hide_done_items': True,
         'items': []
     }
 
@@ -204,7 +205,8 @@ def today_checklist():
             continue
         checklists = model.available_checklists(g['_id'])
         for c in checklists:
-            filter = {'$and': [{'_parentid': c['_id']}, {'due_date': {'$gte': today, '$lt': to_date}}]}
+            # checked not equal True also includes items without the checked field (default: checked=false)
+            filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gte': today, '$lt': to_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {}'.format(c['name'])})
@@ -213,6 +215,7 @@ def today_checklist():
                         i['_id'] = str(i['_id'])
                     if '_parentid' in i:
                         i['_parentid'] = str(i['_parentid'])
+                    i['uri'] = flask.url_for('items.info', _id=i['_id'], _external=True)
                     checklist['items'].append(i)
 
     return flask.jsonify(checklist)

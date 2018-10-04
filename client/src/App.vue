@@ -2,14 +2,14 @@
   <div id="app">
     <v-app id="inspire">
       <v-alert
-        v-model="showErrorMessage"
+        v-model="showAlertMessage"
         dismissible
-        type="error"
+        :type="alertType"
         transition="$primary-transition"
         >
-          {{ errorMessage }}
+          {{ alertMessage }}
       </v-alert>
-      <router-view @showError="showError"/>
+      <router-view @showError="showMessage('error', $event)" @showWarning="showMessage('warning', $event)"/>
 
     </v-app>
   </div>
@@ -19,12 +19,14 @@
 export default {
   data: () => ({
     errorMessage: null,
-    showErrorMessage: false
+    showAlertMessage: false,
+    alertType: 'error'
   }),
   methods: {
-    showError(errorMessage) {
-      this.errorMessage = errorMessage
-      this.showErrorMessage = true
+    showMessage(alertType, errorMessage) {
+      this.alertMessage = errorMessage
+      this.showAlertMessage = true
+      this.alertType = alertType
       console.log(errorMessage)
     }
   }
