@@ -18,7 +18,7 @@
 <script>
 export default {
   data: () => ({
-    errorMessage: null,
+    alertMessage: null,
     showAlertMessage: false,
     alertType: 'error'
   }),
@@ -45,6 +45,10 @@ export default {
 
 .pointable {
   cursor: pointer;
+}
+
+.movable {
+  cursor: move;
 }
 
 .application--wrap {

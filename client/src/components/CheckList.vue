@@ -69,16 +69,36 @@
                   v-if="!item.checked || !checklist.hide_done_items"
                   v-for="item in checklist.items"
                   :key="item.name"
-                  avatar
-                  class="pointable">
+                  avatar>
+                  <!--v-list-tile-avatar
+                    class="handle"
+                    v-if="hover"
+                  >
+                    <v-icon>drag_indicator</v-icon>
+                  </v-list-tile-avatar-->
                   <v-list-tile-avatar @click="checkItem(item)" v-if="!isSection(item)">
                     <v-icon v-if="item.checked">check_box</v-icon>
                     <v-icon v-else>check_box_outline_blank</v-icon>
                   </v-list-tile-avatar>
-                  <v-list-tile-content class="handle" v-if="!isSection(item)">
+                  <v-list-tile-content v-if="!isSection(item)">
                     <v-list-tile-title>
-                      <span v-if="item.checked" class="checked" @dblclick="editItem(item)">{{ item.name }}</span>
-                      <span v-else class="unchecked" @dblclick="editItem(item)">{{ item.name }}</span>
+                      <v-hover>
+                        <v-layout row slot-scope="{ hover }">
+                          <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
+                            <v-tooltip bottom v-if="isEditable()" >
+                              <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
+                              <span>Move item</span>
+                            </v-tooltip>
+                            <v-tooltip bottom v-if="isItemEditable(item)">
+                              <v-icon slot="activator" @click="editItem(item)" class="pointable">edit</v-icon>
+                              <span>Edit item</span>
+                            </v-tooltip>
+                            <span v-if="isEditable() || isItemEditable(item)">&nbsp;</span>
+                          </span>
+                          <span v-if="item.checked" class="checked">{{ item.name }}</span>
+                          <span v-else class="unchecked">{{ item.name }}</span>
+                        </v-layout>
+                      </v-hover>
                     </v-list-tile-title>
                     <v-list-tile-sub-title>
                       <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
@@ -88,7 +108,28 @@
                   </v-list-tile-content>
                   <!-- items that are actually a section -->
                   <v-list-tile-content class="handle" v-else>
-                    <span color="secondary" class="header orange--text ligthen-1" @dblclick="editItem(item)">{{ item.name }}</span>
+                    <v-list-tile-title>
+                      <v-hover>
+                        <v-layout row slot-scope="{ hover }">
+                          <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
+                            <v-tooltip bottom v-if="isEditable()" >
+                              <v-icon color="secondary" slot="activator" class="handle movable">drag_indicator</v-icon>
+                              <span>Move item</span>
+                            </v-tooltip>
+                            <v-tooltip bottom v-if="isItemEditable(item)">
+                              <v-icon color="secondary" slot="activator" @click="editItem(item)" class="pointable">edit</v-icon>
+                              <span>Edit item</span>
+                            </v-tooltip>
+                            <v-tooltip bottom v-if="isItemEditable(item)">
+                              <v-icon color="secondary" slot="activator" class="pointable">assignment</v-icon>
+                              <span>Promote section to checklist</span>
+                            </v-tooltip>
+                            <span v-if="isEditable() || isItemEditable(item)">&nbsp;</span>
+                          </span>
+                          <span color="secondary" class="header orange--text ligthen-1">{{ item.name }}</span>
+                        </v-layout>
+                      </v-hover>
+                    </v-list-tile-title>
                   </v-list-tile-content>
                 </v-list-tile>
               </vue-draggable>
@@ -245,8 +286,8 @@ export default {
     },
 
     updateItem(item, newItemData) {
-      if(item.uri === undefined) {
-        this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
+      if(!this.isItemEditable(item)) {
+        this.$emit('showWarning', 'This item cannot be edited')
         return
       }
       mytasks.post(item.uri, newItemData).then(response => {
@@ -259,6 +300,10 @@ export default {
     },
 
     checkItem(item) {
+      if(!this.isItemEditable(item)) {
+        this.$emit('showWarning', 'This item cannot be edited')
+        return
+      }
       let today = (new Date()).toISOString().slice(0,10)
       let newItemData = {
         checked: !item.checked,
@@ -270,6 +315,10 @@ export default {
     deleteItem(item) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+      }
+      if(!this.isItemEditable(item)) {
+        this.$emit('showWarning', 'This item cannot be edited')
+        return
       }
 
       if(item.uri === undefined) {
@@ -293,6 +342,10 @@ export default {
     },
 
     editItem (item) {
+      if(!this.isItemEditable(item)) {
+        this.$emit('showWarning', 'This item cannot be edited')
+        return
+      }
       this.$refs.itemDialog.show({
         name: item.name,
         comment: item.comment,
@@ -409,6 +462,10 @@ export default {
     isEditable() {
       // return true if the current checklist is editable
       return this.checklist && this.checklist.uri
+    },
+
+    isItemEditable(item) {
+      return item && item.uri
     }
   }
 }
