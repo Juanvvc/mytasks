@@ -38,6 +38,7 @@ def single_user(_id):
     info = user.summary()
     groups_info = list()
     only_public = (str(_id) != flask.g.user_id)
+
     for g in model.available_groups(_id, only_public=only_public):
         group_info = g.copy()
         group_info['_id'] = str(g['_id'])

@@ -8,12 +8,24 @@
       app
     >
       <v-list dense>
+        <!-- items for today -->
+        <v-list-tile>
+          <v-list-tile-content>
+            <v-list-tile-title
+              class="pointable"
+              @click.stop="activeChecklistId = 'today'"
+              ><v-icon>today</v-icon> Today
+            </v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
         <v-list-group
           v-for="group in groups"
           v-model="group._active"
           :key="group._id"
-          @click="loadGroup(group._id)"
+          @click="loadGroup(group)"
           prepend-icon="view_agenda">
+
           <!-- group name -->
           <v-list-tile slot="activator">
             <v-list-tile-content>
@@ -95,7 +107,7 @@
       <check-list
         :checklist-id="activeChecklistId"
         :available-groups="groups"
-        @checklistDeleted="loadGroup(activeGroup._id)"
+        @checklistDeleted="loadGroup(activeGroup)"
         @checklistMoved="checklistMoved"
         @checklistDuplicated="checklistDuplicated"
         @showError="$emit('showError', $event)"
@@ -187,13 +199,31 @@ export default {
       })
     },
 
-    loadGroup(groupId, checklistId) {
+    loadGroup(group, checklistId) {
       /* get data about a group from the server, and set it as active.
 
       If a checklistIf is passed, load also the checklist */
-      mytasks.get(`/groups/${groupId}`).then( response => {
+
+      if(!group._id || !group.uri) {
+        // it is a special group: do not request additional informatio, use what you have in the memory
         for(var i=0; i<this.groups.length; i++) {
-          if(this.groups[i]._id === groupId) {
+          if(this.groups[i].name === group.name) {
+            // we must set this because it is set in the v-list v-model
+            this.groups[i]._active = true
+
+            // set activegroup
+            this.activeGroup = this.groups[i]
+            this.activeChecklistId = checklistId
+          } else {
+            this.groups[i].active = false
+          }
+        }
+        return
+      }
+
+      mytasks.get(group.uri).then( response => {
+        for(var i=0; i<this.groups.length; i++) {
+          if(this.groups[i]._id === group._id) {
             // set data
             this.groups[i] = response.data
 
@@ -283,15 +313,15 @@ export default {
     },
 
     checklistDuplicated(newChecklist) {
-      this.loadGroup(this.activeGroup._id, newChecklist._id)
+      this.loadGroup(this.activeGroup, newChecklist._id)
     },
 
     checklistDeleted() {
-      this.loadGroup(this.activeGroup._id)
+      this.loadGroup(this.activeGroup)
     },
 
     checklistMoved(checklist, toGroupId) {
-      this.loadGroup(toGroupId, checklist._id)
+      this.loadGroup(this.getGroupById(toGroupId), checklist._id)
     },
 
     logout() {

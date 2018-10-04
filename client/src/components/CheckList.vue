@@ -166,7 +166,7 @@ export default {
 
   methods: {
     loadChecklist () {
-      if(this.checklistId === undefined || this.checlistId === null) {
+      if(!this.checklistId) {
         this.checklist = null
         return
       }
@@ -181,6 +181,7 @@ export default {
     },
 
     duplicateChecklist() {
+      if(!this.isEditable()) return
       /* Duplicates current checklist. */
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist')
@@ -193,6 +194,8 @@ export default {
     },
 
     deleteChecklist() {
+      if(!this.isEditable()) return
+
       this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
         if(!confirm) {
           return
@@ -206,6 +209,8 @@ export default {
     },
 
     updateChecklist(newData) {
+      if(!this.isEditable()) return
+
       // updates the information of the checklist with new data
       return mytasks.post(`/checklists/${this.checklistId}`, newData).then(response => {
         this.checklist = response.data
@@ -216,6 +221,8 @@ export default {
     },
 
     newItem(name) {
+      if(!this.isEditable()) return
+
       let newItemInfo = {
         name: name,
         _parentid: this.checklistId
@@ -231,6 +238,12 @@ export default {
     },
 
     updateItem(item, newItemData) {
+      if(!this.isEditable()) return
+
+      if(item.uri === undefined) {
+        this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
+        return
+      }
       mytasks.post(item.uri, newItemData).then(response => {
         this.$set(item, 'checked', response.data.checked)
         this.$set(item, 'name', response.data.name)
@@ -241,6 +254,8 @@ export default {
     },
 
     checkItem(item) {
+      if(!this.isEditable()) return
+
       let today = (new Date()).toISOString().slice(0,10)
       let newItemData = {
         checked: !item.checked,
@@ -250,6 +265,12 @@ export default {
     },
 
     deleteItem(item) {
+      if(!this.isEditable()) return
+
+      if(item.uri === undefined) {
+        this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
+        return
+      }
       mytasks.delete(item.uri).then(response => {
         if(response.data.status === 200) {
           let oldItemPos = -1
@@ -267,6 +288,8 @@ export default {
     },
 
     clearChecklist() {
+      if(!this.isEditable()) return
+
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist to clear')
       }
@@ -281,12 +304,16 @@ export default {
     },
 
     moveChecklist(toGroupId) {
+      if(!this.isEditable()) return
+
       this.updateChecklist({_parentid: toGroupId}).then( () => {
         this.$emit('checklistMoved', this.checklist, toGroupId)
       })
     },
 
     editItem (item) {
+      if(!this.isEditable()) return
+
       this.$refs.itemDialog.show({
         name: item.name,
         comment: item.comment,
@@ -305,6 +332,8 @@ export default {
     },
 
     editDescription () {
+      if(!this.isEditable()) return
+
       // active the edit description dialog
       this.editingDescription = true
       if(this.checklist !== undefined && this.checklist.description !== undefined) {
@@ -315,6 +344,8 @@ export default {
     },
 
     saveDescription () {
+      if(!this.isEditable()) return
+
       // save the new description
       this.updateChecklist({description: this.newDescription.trim()})
       this.updateCh
@@ -322,12 +353,16 @@ export default {
     },
 
     editName () {
+      if(!this.isEditable()) return
+
       // active the edit name dialog
       this.editingName = true
       this.newName = this.checklist.name
     },
 
     saveName () {
+      if(!this.isEditable()) return
+
       // save the new name
       if(this.newName === '') {
         this.$emit('showError', 'The name cannot be empty')
@@ -338,6 +373,8 @@ export default {
     },
 
     finishItemDrag() {
+      if(!this.isEditable()) return
+
       this.drag = false
       this.updateChecklist({items: this.checklist.items})
     },
@@ -350,6 +387,11 @@ export default {
       } catch (e){
         return false
       }
+    },
+
+    isEditable() {
+      // return true if the current checklist is editable
+      return this.checklist && this.checklist.uri
     }
   }
 }

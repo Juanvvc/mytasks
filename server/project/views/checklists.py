@@ -2,6 +2,7 @@ import flask
 import project.model as model
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
+import datetime
 
 
 def get_blueprint(auth=None):
@@ -12,6 +13,8 @@ def get_blueprint(auth=None):
     blueprint.add_url_rule('/checklists/<_id>', view_func=auth.login_required(delete_checklist), methods=['DELETE'], endpoint='delete')
     blueprint.add_url_rule('/checklists/<_id>/clear', view_func=auth.login_required(clear_checklist), methods=['POST'], endpoint='clear')
     blueprint.add_url_rule('/checklists/<_id>/duplicate', view_func=auth.login_required(duplicate_checklist), methods=['POST'], endpoint='duplicate')
+    blueprint.add_url_rule('/checklists/today', view_func=auth.login_required(today_checklist), methods=['GET'], endpoint='today')
+
     return blueprint
 
 
@@ -67,7 +70,7 @@ def single_checklist(_id):
                     item_info = dict(name='NOT FOUND: {}'.format(str(item['_id'])), _id=str(item['_id']))
                 else:
                     item_info = real_item.sane_info()
-                    item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()))
+                    item_info['uri'] = flask.url_for('items.info', _id=str(real_item.id()), _external=True)
                 new_items.append(item_info)
             else:
                 # item has no _id: assume it is an internal document.
@@ -181,3 +184,35 @@ def duplicate_checklist(_id):
         return single_checklist(checklist.id())
     else:
         flask.abort(500, 'Error while saving new checklist')
+
+
+def today_checklist():
+    """Gets a special checklist due_date set to a week from today """
+
+    today = datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0, 0)).isoformat()
+    to_date = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()
+
+    checklist = {
+        'name': 'Today',
+        'description': 'Due Items from {} to {}'.format(today[:10], to_date[:10]),
+        'items': []
+    }
+
+    groups = model.available_groups(flask.g.user_id)
+    for g in groups:
+        if '_id' not in g:
+            continue
+        checklists = model.available_checklists(g['_id'])
+        for c in checklists:
+            filter = {'$and': [{'_parentid': c['_id']}, {'due_date': {'$gte': today, '$lt': to_date}}]}
+            if model.db.items.count_documents(filter) > 0:
+                items = model.db.items.find(filter)
+                checklist['items'].append({'name': '# {}'.format(c['name'])})
+                for i in items:
+                    if '_id' in i:
+                        i['_id'] = str(i['_id'])
+                    if '_parentid' in i:
+                        i['_parentid'] = str(i['_parentid'])
+                    checklist['items'].append(i)
+
+    return flask.jsonify(checklist)
