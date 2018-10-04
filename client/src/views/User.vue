@@ -124,6 +124,8 @@ import CheckList from '@/components/CheckList.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import mytasks from '@/libs/mytasksclient.js'
 
+const DEFAULT_CHECKLIST = 'today'
+
 export default {
   components: {
     CheckList,
@@ -194,6 +196,7 @@ export default {
       mytasks.get(useruri).then(response => {
         this.activeUser = response.data
         this.groups = response.data.groups
+        this.activeChecklistId = DEFAULT_CHECKLIST
       }, error => {
         this.$emit('showError', error)
       })
