@@ -6,3 +6,4 @@ __pycache__
 server/tmp
 dump
 client/publish.sh
+test
