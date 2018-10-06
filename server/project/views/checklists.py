@@ -100,7 +100,7 @@ def update_checklist(_id):
                 new_items.append(dict(_id=ObjectId(item['_id'])))
             new_info['items'] = new_items
     except InvalidId:
-        flask.abort(400, 'Invalid indentifiers in the items array')
+        flask.abort(400, 'Invalid identifiers in the items array')
 
     checklist.info.update(new_info)
 
@@ -187,7 +187,7 @@ def duplicate_checklist(_id):
 
 
 def today_checklist():
-    """Gets a special checklist due_date set to a week from today """
+    """Gets a special checklist with unchecked items with a due_date before a week from today. """
 
     today = datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0, 0)).isoformat()[:10]
     to_date = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()[:10]
@@ -206,7 +206,8 @@ def today_checklist():
         checklists = model.available_checklists(g['_id'])
         for c in checklists:
             # checked not equal True also includes items without the checked field (default: checked=false)
-            filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gte': today, '$lt': to_date}}]}
+            # also, do not include empty due_date
+            filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gt': '', '$lt': to_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {}'.format(c['name'])})

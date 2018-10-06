@@ -70,21 +70,18 @@
                   v-for="item in checklist.items"
                   :key="item.name"
                   avatar>
-                  <!--v-list-tile-avatar
-                    class="handle"
-                    v-if="hover"
-                  >
-                    <v-icon>drag_indicator</v-icon>
-                  </v-list-tile-avatar-->
                   <v-list-tile-avatar @click="checkItem(item)" v-if="!isSection(item)">
-                    <v-icon v-if="item.checked">check_box</v-icon>
-                    <v-icon v-else>check_box_outline_blank</v-icon>
+                    <!-- checkbox -->
+                    <v-btn icon>
+                      <v-icon v-if="item.checked" class="pointable">check_box</v-icon>
+                      <v-icon v-else class="pointable">check_box_outline_blank</v-icon>
+                    </v-btn>
                   </v-list-tile-avatar>
                   <v-list-tile-content v-if="!isSection(item)">
                     <v-list-tile-title>
                       <v-hover>
                         <v-layout row slot-scope="{ hover }">
-                          <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
+                          <span sm1 v-if="hover">
                             <v-tooltip bottom v-if="isEditable()" >
                               <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
                               <span>Move item</span>
@@ -101,8 +98,13 @@
                       </v-hover>
                     </v-list-tile-title>
                     <v-list-tile-sub-title>
+                      <!-- due and complete dates and comments -->
                       <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
-                      <span v-if="item.due_date">Due date: {{item.due_date}}. </span>
+                      <span v-if="item.due_date">
+                          <span class="red--text" v-if="item.due_date < (new Date().toISOString())">OVERDUE: {{item.due_date}}.</span>
+                          <span v-else>Due date: {{item.due_date}}.</span>
+                          &nbsp;
+                      </span>
                       <span v-if="item.comment">{{item.comment}}</span>
                     </v-list-tile-sub-title>
                   </v-list-tile-content>
@@ -475,5 +477,9 @@ export default {
 .checked {
   color: #aaa;
   text-decoration: line-through;
+}
+
+.nopadding {
+  padding: 0 !important;
 }
 </style>
