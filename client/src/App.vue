@@ -1,14 +1,14 @@
 <template>
   <div id="app">
     <v-app id="inspire">
-      <v-alert
-        v-model="showAlertMessage"
-        dismissible
-        :type="alertType"
-        transition="$primary-transition"
-        >
-          {{ alertMessage }}
-      </v-alert>
+      <v-snackbar
+      v-model="showAlertMessage"
+      :color="alertType"
+      :timeout="6000"
+      top
+      >
+        {{ alertMessage}}
+      </v-snackbar>
       <router-view @showError="showMessage('error', $event)" @showWarning="showMessage('warning', $event)"/>
 
     </v-app>

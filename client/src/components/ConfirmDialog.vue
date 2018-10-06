@@ -1,7 +1,7 @@
 <template>
   <v-container>
        <v-layout>
-           <v-dialog v-model="visible" max-width="290" ref="popup">
+           <v-dialog v-model="visible" max-width="390" ref="popup">
                <v-card>
                    <v-card-title class="headline">{{ title }}</v-card-title>
                    <v-card-text>{{  message }}</v-card-text>

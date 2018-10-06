@@ -133,7 +133,7 @@ export default {
     ConfirmDialog
   },
   data: () => ({
-    showDrawer: true,
+    showDrawer: false,
     newGroupName: '',
     activeChecklistId: null,
     activeGroup: null,

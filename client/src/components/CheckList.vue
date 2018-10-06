@@ -13,7 +13,7 @@
             </v-toolbar-title>
             <v-spacer />
             <!-- Select group, only if the checklist is editable -->
-            <v-flex sm3>
+            <v-flex xs2 sm3>
               <v-select
                placeholder="GROUP"
                v-if="isEditable()"
@@ -62,13 +62,13 @@
             <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
             <p v-else @dblclick="editDescription()"><b>No description</b></p>
 
-            <v-list>
+            <v-list class="nopadding">
               <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle', disabled: !isEditable()}">
                 <!-- normal items -->
                 <v-list-tile
                   v-if="!item.checked || !checklist.hide_done_items"
                   v-for="item in checklist.items"
-                  :key="item.name"
+                  :key="item.id?item.id:item.name"
                   avatar>
                   <v-list-tile-avatar @click="checkItem(item)" v-if="!isSection(item)">
                     <!-- checkbox -->
@@ -77,7 +77,7 @@
                       <v-icon v-else class="pointable">check_box_outline_blank</v-icon>
                     </v-btn>
                   </v-list-tile-avatar>
-                  <v-list-tile-content v-if="!isSection(item)">
+                  <v-list-tile-content v-if="!isSection(item)" @dblclick="editItem(item)">
                     <v-list-tile-title>
                       <v-hover>
                         <v-layout row slot-scope="{ hover }">
@@ -86,11 +86,7 @@
                               <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
                               <span>Move item</span>
                             </v-tooltip>
-                            <v-tooltip bottom v-if="isItemEditable(item)">
-                              <v-icon slot="activator" @click="editItem(item)" class="pointable">edit</v-icon>
-                              <span>Edit item</span>
-                            </v-tooltip>
-                            <span v-if="isEditable() || isItemEditable(item)">&nbsp;</span>
+                            <span v-if="isEditable()">&nbsp;</span>
                           </span>
                           <span v-if="item.checked" class="checked">{{ item.name }}</span>
                           <span v-else class="unchecked">{{ item.name }}</span>
@@ -109,7 +105,7 @@
                     </v-list-tile-sub-title>
                   </v-list-tile-content>
                   <!-- items that are actually a section -->
-                  <v-list-tile-content class="handle" v-else>
+                  <v-list-tile-content class="handle" @dblclick="editItem(item)" v-else>
                     <v-list-tile-title>
                       <v-hover>
                         <v-layout row slot-scope="{ hover }">
@@ -119,16 +115,16 @@
                               <span>Move item</span>
                             </v-tooltip>
                             <v-tooltip bottom v-if="isItemEditable(item)">
-                              <v-icon color="secondary" slot="activator" @click="editItem(item)" class="pointable">edit</v-icon>
-                              <span>Edit item</span>
-                            </v-tooltip>
-                            <v-tooltip bottom v-if="isItemEditable(item)">
-                              <v-icon color="secondary" slot="activator" class="pointable">assignment</v-icon>
+                              <v-icon color="secondary" slot="activator" class="pointable" @click="promoteSection(item)">assignment</v-icon>
                               <span>Promote section to checklist</span>
                             </v-tooltip>
-                            <span v-if="isEditable() || isItemEditable(item)">&nbsp;</span>
+                            <span v-if="isEditable()">&nbsp;</span>
                           </span>
-                          <span color="secondary" class="header orange--text ligthen-1">{{ item.name }}</span>
+                          <span
+                            color="secondary"
+                            class="header orange--text ligthen-1">
+                            {{ item.name }}
+                          </span>
                         </v-layout>
                       </v-hover>
                     </v-list-tile-title>
@@ -229,6 +225,7 @@ export default {
       /* Duplicates current checklist. */
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist')
+        return
       }
       mytasks.post(`/checklists/${this.checklist._id}/duplicate`).then( response => {
         this.$emit('checklistDuplicated', response.data)
@@ -240,6 +237,7 @@ export default {
     deleteChecklist() {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
@@ -257,6 +255,7 @@ export default {
     updateChecklist(newData) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       // updates the information of the checklist with new data
@@ -271,6 +270,7 @@ export default {
     newItem(name) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       let newItemInfo = {
@@ -317,6 +317,7 @@ export default {
     deleteItem(item) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
       if(!this.isItemEditable(item)) {
         this.$emit('showWarning', 'This item cannot be edited')
@@ -368,10 +369,12 @@ export default {
     clearChecklist() {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist to clear')
+        return
       }
       this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'}).then( confirm => {
         if(!confirm) {
@@ -386,6 +389,7 @@ export default {
     moveChecklist(toGroupId) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       this.updateChecklist({_parentid: toGroupId}).then( () => {
@@ -396,6 +400,7 @@ export default {
     editDescription () {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       // active the edit description dialog
@@ -410,6 +415,7 @@ export default {
     saveDescription () {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       // save the new description
@@ -421,6 +427,7 @@ export default {
     editName () {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       // active the edit name dialog
@@ -431,6 +438,7 @@ export default {
     saveName () {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       // save the new name
@@ -445,6 +453,7 @@ export default {
     finishItemDrag() {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
+        return
       }
 
       this.drag = false
@@ -459,6 +468,57 @@ export default {
       } catch (e){
         return false
       }
+    },
+
+    promoteSection(item) {
+      // promotes a section to a checklist
+      if(!this.isEditable()) {
+        this.$emit('showWarning', 'This checklist cannot be edited')
+        return
+      }
+
+      this.$refs.confirmDialog.confirm({title: `Promote section "${item.name}"?`, yes: 'Promote', message: 'This action cannot be undone'}).then( confirm => {
+        if(!confirm) {
+          return
+        }
+        // get where the section starts and its length
+        let indexOfItem = -1
+        let numberOfItems = 1
+        for(let i=0; i<this.checklist.items.length; i++){
+          if(indexOfItem == -1) {
+            if(this.checklist.items[i]._id === item._id) {
+              indexOfItem = i
+            }
+          } else {
+            if(this.isSection(this.checklist.items[i])) {
+              break
+            }
+            numberOfItems++
+          }
+        }
+        if(indexOfItem === -1) {
+          this.$emit('showError', 'Section not found')
+          return
+        }
+
+        // create the new checklist with the old items
+        var new_items = []
+        for(let i=indexOfItem + 1; i<indexOfItem + numberOfItems; i++) {
+          new_items.push({_id: this.checklist.items[i]._id})
+        }
+        mytasks.post('/checklists/', {
+          name: this.checklist.name + ' ' + this.checklist.items[indexOfItem].name,
+          items: new_items,
+          _parentid: this.checklist._parentid
+        }).then( response => {
+          if(!response) return
+          // delete the items from the current checklist
+          this.checklist.items.splice(indexOfItem, numberOfItems)
+          mytasks.post(this.checklist.uri, {items: this.checklist.items})  // notice we ignore errors here
+          // ask to load the new checklist
+          this.$emit('checklistDuplicated', response.data)
+        })
+      })
     },
 
     isEditable() {
@@ -479,7 +539,7 @@ export default {
   text-decoration: line-through;
 }
 
-.nopadding {
+.nopadding >>> .v-list__tile {
   padding: 0 !important;
 }
 </style>
