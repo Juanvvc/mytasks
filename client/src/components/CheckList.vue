@@ -96,7 +96,7 @@
                     <v-list-tile-sub-title>
                       <!-- due and complete dates and comments -->
                       <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
-                      <span v-if="item.due_date">
+                      <span v-if="item.due_date && !item.checked">
                           <span class="red--text" v-if="item.due_date < (new Date().toISOString())">OVERDUE: {{item.due_date}}.</span>
                           <span v-else>Due date: {{item.due_date}}.</span>
                           &nbsp;
