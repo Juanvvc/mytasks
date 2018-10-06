@@ -189,12 +189,11 @@ def duplicate_checklist(_id):
 def today_checklist():
     """Gets a special checklist with unchecked items with a due_date before a week from today. """
 
-    today = datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0, 0)).isoformat()[:10]
     to_date = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()[:10]
 
     checklist = {
         'name': 'Today',
-        'description': 'Due Items from {} to {}'.format(today, to_date),
+        'description': 'Due items before {}'.format(to_date),
         'hide_done_items': True,
         'items': []
     }

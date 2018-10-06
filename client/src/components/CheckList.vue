@@ -31,11 +31,11 @@
               </v-btn>
               <span>Show/hide done items</span>
             </v-tooltip>
-            <v-tooltip bottom v-if="isEditable()">
-              <v-btn slot="activator" :dark="!checklist.hide_done_date" icon @click="updateChecklist({hide_done_date: !checklist.hide_done_date})">
+            <v-tooltip bottom>
+              <v-btn slot="activator" :dark="showCalendar" icon @click="switchShowCalendar()">
                 <v-icon>today</v-icon>
               </v-btn>
-              <span>Show/hide done dates in items</span>
+              <span>Show/hide calendar view</span>
             </v-tooltip>
 
             <v-menu bottom left v-if="isEditable()">
@@ -57,7 +57,18 @@
 
           <v-divider />
 
-          <v-card-text>
+          <v-card-text v-if="showCalendar">
+            <!-- calendar view -->
+            <p>The calendar only shows undone items</p>
+            <calendar-view
+              :starting-day-of-week="1"
+              class="theme-default"
+              :events="calendarEvents"
+              style="height: 600px"
+              >
+            </calendar-view>
+          </v-card-text>
+          <v-card-text v-else>
             <v-textarea v-if="editingDescription" label="Description" v-model="newDescription" @keyup.enter="saveDescription()"></v-textarea>
             <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
             <p v-else @dblclick="editDescription()"><b>No description</b></p>
@@ -95,9 +106,9 @@
                     </v-list-tile-title>
                     <v-list-tile-sub-title>
                       <!-- due and complete dates and comments -->
-                      <span v-if="item.done_date && !checklist.hide_done_date">Completed on: {{item.done_date}}. </span>
+                      <span v-if="item.done_date">Completed on: {{item.done_date}}. </span>
                       <span v-if="item.due_date && !item.checked">
-                          <span class="red--text" v-if="item.due_date < (new Date().toISOString())">OVERDUE: {{item.due_date}}.</span>
+                          <span class="red--text" v-if="item.due_date < (new Date().toISOString().slice(0,10))">OVERDUE: {{item.due_date}}.</span>
                           <span v-else>Due date: {{item.due_date}}.</span>
                           &nbsp;
                       </span>
@@ -168,13 +179,17 @@
 import ItemDialog from '@/components/ItemDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import VueDraggable from 'vuedraggable'
+import { CalendarView, CalendarViewHeader } from "vue-simple-calendar"
+require("vue-simple-calendar/static/css/default.css")
 import mytasks from '@/libs/mytasksclient'
 
 export default {
   components: {
     ItemDialog,
     VueDraggable,
-    ConfirmDialog
+    ConfirmDialog,
+    CalendarView,
+    CalendarViewHeader
   },
 
   props: {
@@ -194,7 +209,9 @@ export default {
     newName: '',
     editingDescription: false,
     newDescription: '',
-    drag: false
+    drag: false,
+    showCalendar: false,
+    calendarEvents: []
   }),
 
   watch: {
@@ -215,6 +232,7 @@ export default {
         if(response.data.error_message !== undefined) {
           this.$emit('showError', response.data.error_message)
         } else {
+          this.showCalendar = false
           this.checklist = response.data
         }
       })
@@ -528,6 +546,26 @@ export default {
 
     isItemEditable(item) {
       return item && item.uri
+    },
+
+    switchShowCalendar() {
+      this.showCalendar = !this.showCalendar
+      if(this.showCalendar && this.checklist) {
+        // update calendarEvents
+        this.calendarEvents = []
+        let now = (new Date()).toISOString().slice(0,10)
+        for(let i=0; i<this.checklist.items.length; i++) {
+          let item = this.checklist.items[i]
+          if(!item.checked && item.due_date) {
+            let overdue = (item.due_date<now)
+            this.calendarEvents.push({
+              title: item.name,
+              startDate: (overdue?now:item.due_date),
+              classes: (overdue?'calendar-overdue':'calendar-task'),
+            })
+          }
+        }
+      }
     }
   }
 }
@@ -541,5 +579,15 @@ export default {
 
 .nopadding >>> .v-list__tile {
   padding: 0 !important;
+}
+
+.theme-default >>> .calendar-task {
+	background-color:#f9aa33;
+  border-radius:0;
+}
+.theme-default >>> .calendar-overdue {
+	background-color:#ff0000;
+  border-radius:0;
+  color: white;
 }
 </style>
