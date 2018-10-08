@@ -1,177 +1,171 @@
 <template>
-  <v-layout row wrap>
+  <div v-if="checklist !== undefined && checklist !== null" class="pa-1">
+    <v-card >
+      <v-toolbar card prominent color="secondary" class="checklist-header">
+        <!-- name -->
+        <v-toolbar-title class="body-2">
+          <v-text-field v-if="editingName" label="Name" v-model="newName" @keyup.enter="saveName()"></v-text-field>
+          <span v-else  class="white--text headline"  @dblclick="editName()">{{checklist.name}}</span>
+        </v-toolbar-title>
+        <v-spacer />
+        <!-- Select group, only if the checklist is editable -->
+        <!--v-flex xs2 sm3>
+          <v-select
+           placeholder="GROUP"
+           v-if="isEditable()"
+           v-model="checklist._parentid"
+           :items="availableGroups"
+           item-text="name"
+           item-value="_id"
+           @change="moveChecklist(checklist._parentid)"
+           />
+        </v-flex-->
+        <!-- toggles -->
+        <v-tooltip bottom v-if="isEditable()">
+          <v-btn small slot="activator" :dark="!checklist.hide_done_items" icon @click="updateChecklist({hide_done_items: !checklist.hide_done_items})">
+            <v-icon>done_outline</v-icon>
+          </v-btn>
+          <span>Show/hide done items</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <v-btn small slot="activator" :dark="showCalendar" icon @click="switchShowCalendar()">
+            <v-icon>today</v-icon>
+          </v-btn>
+          <span>Show/hide calendar view</span>
+        </v-tooltip>
 
+        <v-menu bottom left v-if="isEditable()">
+          <v-btn
+            slot="activator"
+            dark
+            icon
+            small
+          >
+            <v-icon>more_vert</v-icon>
+          </v-btn>
 
-    <v-flex xs12 sm10 offset-sm1>
-      <div v-if="checklist !== undefined && checklist !== null">
-        <v-card >
-          <v-toolbar card prominent color="secondary" class="checklist-header">
-            <!-- name -->
-            <v-toolbar-title class="body-2">
-              <v-text-field v-if="editingName" label="Name" v-model="newName" @keyup.enter="saveName()"></v-text-field>
-              <span v-else  class="white--text headline"  @dblclick="editName()">{{checklist.name}}</span>
-            </v-toolbar-title>
-            <v-spacer />
-            <!-- Select group, only if the checklist is editable -->
-            <v-flex xs2 sm3>
-              <v-select
-               placeholder="GROUP"
-               v-if="isEditable()"
-               v-model="checklist._parentid"
-               :items="availableGroups"
-               item-text="name"
-               item-value="_id"
-               @change="moveChecklist(checklist._parentid)"
-               />
-            </v-flex>
-            <!-- toggles -->
-            <v-tooltip bottom v-if="isEditable()">
-              <v-btn slot="activator" :dark="!checklist.hide_done_items" icon @click="updateChecklist({hide_done_items: !checklist.hide_done_items})">
-                <v-icon>done_outline</v-icon>
-              </v-btn>
-              <span>Show/hide done items</span>
-            </v-tooltip>
-            <v-tooltip bottom>
-              <v-btn slot="activator" :dark="showCalendar" icon @click="switchShowCalendar()">
-                <v-icon>today</v-icon>
-              </v-btn>
-              <span>Show/hide calendar view</span>
-            </v-tooltip>
+          <v-list>
+            <v-list-tile class="pointable"><v-list-tile-title @click="duplicateChecklist">Duplicate checklist</v-list-tile-title></v-list-tile>
+            <v-list-tile class="pointable"><v-list-tile-title @click="clearChecklist">Remove done items</v-list-tile-title></v-list-tile>
+            <v-list-tile class="pointable"><v-list-tile-title @click="deleteChecklist">Delete checklist</v-list-tile-title></v-list-tile>
+          </v-list>
+        </v-menu>
+      </v-toolbar>
 
-            <v-menu bottom left v-if="isEditable()">
-              <v-btn
-                slot="activator"
-                dark
-                icon
-              >
-                <v-icon>more_vert</v-icon>
-              </v-btn>
+      <v-divider />
 
-              <v-list>
-                <v-list-tile class="pointable"><v-list-tile-title @click="duplicateChecklist">Duplicate checklist</v-list-tile-title></v-list-tile>
-                <v-list-tile class="pointable"><v-list-tile-title @click="clearChecklist">Remove done items</v-list-tile-title></v-list-tile>
-                <v-list-tile class="pointable"><v-list-tile-title @click="deleteChecklist">Delete checklist</v-list-tile-title></v-list-tile>
-              </v-list>
-            </v-menu>
-          </v-toolbar>
+      <v-card-text v-if="showCalendar">
+        <!-- calendar view -->
+        <p>The calendar only shows undone items</p>
+        <calendar-view
+          :starting-day-of-week="1"
+          class="theme-default"
+          :events="calendarEvents"
+          style="height: 600px"
+          >
+        </calendar-view>
+      </v-card-text>
+      <v-card-text v-else>
+        <v-textarea v-if="editingDescription" label="Description" v-model="newDescription" @keyup.enter="saveDescription()"></v-textarea>
+        <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
+        <p v-else @dblclick="editDescription()"><b>No description</b></p>
 
-          <v-divider />
-
-          <v-card-text v-if="showCalendar">
-            <!-- calendar view -->
-            <p>The calendar only shows undone items</p>
-            <calendar-view
-              :starting-day-of-week="1"
-              class="theme-default"
-              :events="calendarEvents"
-              style="height: 600px"
-              >
-            </calendar-view>
-          </v-card-text>
-          <v-card-text v-else>
-            <v-textarea v-if="editingDescription" label="Description" v-model="newDescription" @keyup.enter="saveDescription()"></v-textarea>
-            <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
-            <p v-else @dblclick="editDescription()"><b>No description</b></p>
-
-            <v-list class="nopadding">
-              <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle', disabled: !isEditable()}">
-                <!-- normal items -->
-                <v-list-tile
-                  v-if="!item.checked || !checklist.hide_done_items"
-                  v-for="item in checklist.items"
-                  :key="item.id?item.id:item.name"
-                  avatar>
-                  <v-list-tile-avatar @click="checkItem(item)" v-if="!isSection(item)">
-                    <!-- checkbox -->
-                    <v-btn icon>
-                      <v-icon v-if="item.checked" class="pointable">check_box</v-icon>
-                      <v-icon v-else class="pointable">check_box_outline_blank</v-icon>
-                    </v-btn>
-                  </v-list-tile-avatar>
-                  <v-list-tile-content v-if="!isSection(item)" @dblclick="editItem(item)">
-                    <v-list-tile-title>
-                      <v-hover>
-                        <v-layout row slot-scope="{ hover }">
-                          <span sm1 v-if="hover">
-                            <v-tooltip bottom v-if="isEditable()" >
-                              <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
-                              <span>Move item</span>
-                            </v-tooltip>
-                            <span v-if="isEditable()">&nbsp;</span>
-                          </span>
-                          <span v-if="item.checked" class="checked">{{ item.name }}</span>
-                          <span v-else class="unchecked">{{ item.name }}</span>
-                        </v-layout>
-                      </v-hover>
-                    </v-list-tile-title>
-                    <v-list-tile-sub-title>
-                      <!-- due and complete dates and comments -->
-                      <span v-if="item.done_date">Completed on: {{item.done_date}}. </span>
-                      <span v-if="item.due_date && !item.checked">
-                          <span class="red--text" v-if="item.due_date < (new Date().toISOString().slice(0,10))">OVERDUE: {{item.due_date}}.</span>
-                          <span v-else>Due date: {{item.due_date}}.</span>
-                          &nbsp;
+        <v-list dense class="nopadding">
+          <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle', disabled: !isEditable()}">
+            <!-- normal items -->
+            <v-list-tile
+              v-if="!item.checked || !checklist.hide_done_items"
+              v-for="item in checklist.items"
+              :key="item.id?item.id:item.name"
+              avatar>
+              <v-list-tile-avatar @click="checkItem(item)" v-if="!isSection(item)">
+                <!-- checkbox -->
+                <v-btn icon>
+                  <v-icon v-if="item.checked" class="pointable">check_box</v-icon>
+                  <v-icon v-else class="pointable">check_box_outline_blank</v-icon>
+                </v-btn>
+              </v-list-tile-avatar>
+              <v-list-tile-content v-if="!isSection(item)" @dblclick="editItem(item)">
+                <v-list-tile-title>
+                  <v-hover>
+                    <v-layout row slot-scope="{ hover }">
+                      <span sm1 v-if="hover">
+                        <v-tooltip bottom v-if="isEditable()" >
+                          <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
+                          <span>Move item</span>
+                        </v-tooltip>
+                        <span v-if="isEditable()">&nbsp;</span>
                       </span>
-                      <span v-if="item.comment">{{item.comment}}</span>
-                    </v-list-tile-sub-title>
-                  </v-list-tile-content>
-                  <!-- items that are actually a section -->
-                  <v-list-tile-content class="handle" @dblclick="editItem(item)" v-else>
-                    <v-list-tile-title>
-                      <v-hover>
-                        <v-layout row slot-scope="{ hover }">
-                          <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
-                            <v-tooltip bottom v-if="isEditable()" >
-                              <v-icon color="secondary" slot="activator" class="handle movable">drag_indicator</v-icon>
-                              <span>Move item</span>
-                            </v-tooltip>
-                            <v-tooltip bottom v-if="isItemEditable(item)">
-                              <v-icon color="secondary" slot="activator" class="pointable" @click="promoteSection(item)">assignment</v-icon>
-                              <span>Promote section to checklist</span>
-                            </v-tooltip>
-                            <span v-if="isEditable()">&nbsp;</span>
-                          </span>
-                          <span
-                            color="secondary"
-                            class="header orange--text ligthen-1">
-                            {{ item.name }}
-                          </span>
-                        </v-layout>
-                      </v-hover>
-                    </v-list-tile-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-              </vue-draggable>
-            </v-list>
-            <!-- Final row: Add a new item -->
-            <v-text-field
-              v-if="isEditable()"
-              v-model="newItemName"
-              placeholder="New item"
-              @keyup.enter="newItem(newItemName); newItemName=''"
-              @keyup.escape="newItemName = ''"
-              @blur="newItemName = ''"
-              solo />
-          </v-card-text>
-        </v-card>
-      </div>
-
-      <div v-else>
-        <!-- No checklist selected -->
-        <v-card>
-          <v-toolbar card prominent color="secondary" class="checklist-header">
-            <v-toolbar-title class="body-2">
-              <span class="white--text headline">No checklist selected</span>
-            </v-toolbar-title>
-          </v-toolbar>
-        </v-card>
-      </div>
-    </v-flex>
+                      <span v-if="item.checked" class="checked">{{ item.name }}</span>
+                      <span v-else class="unchecked">{{ item.name }}</span>
+                    </v-layout>
+                  </v-hover>
+                </v-list-tile-title>
+                <v-list-tile-sub-title>
+                  <!-- due and complete dates and comments -->
+                  <span v-if="item.done_date">Completed on: {{item.done_date}}. </span>
+                  <span v-if="item.due_date && !item.checked">
+                      <span class="red--text" v-if="item.due_date < (new Date().toISOString().slice(0,10))">OVERDUE: {{item.due_date}}.</span>
+                      <span v-else>Due date: {{item.due_date}}.</span>
+                      &nbsp;
+                  </span>
+                  <span v-if="item.comment">{{item.comment}}</span>
+                </v-list-tile-sub-title>
+              </v-list-tile-content>
+              <!-- items that are actually a section -->
+              <v-list-tile-content class="handle" @dblclick="editItem(item)" v-else>
+                <v-list-tile-title>
+                  <v-hover>
+                    <v-layout row slot-scope="{ hover }">
+                      <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
+                        <v-tooltip bottom v-if="isEditable()" >
+                          <v-icon color="secondary" slot="activator" class="handle movable">drag_indicator</v-icon>
+                          <span>Move item</span>
+                        </v-tooltip>
+                        <v-tooltip bottom v-if="isItemEditable(item)">
+                          <v-icon color="secondary" slot="activator" class="pointable" @click="promoteSection(item)">assignment</v-icon>
+                          <span>Promote section to checklist</span>
+                        </v-tooltip>
+                        <span v-if="isEditable()">&nbsp;</span>
+                      </span>
+                      <span
+                        color="secondary"
+                        class="header orange--text ligthen-1">
+                        {{ item.name }}
+                      </span>
+                    </v-layout>
+                  </v-hover>
+                </v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </vue-draggable>
+        </v-list>
+        <!-- Final row: Add a new item -->
+        <v-text-field
+          v-if="isEditable()"
+          v-model="newItemName"
+          placeholder="New item"
+          @keyup.enter="newItem(newItemName); newItemName=''"
+          @keyup.escape="newItemName = ''"
+          @blur="newItemName = ''"
+          solo />
+      </v-card-text>
+    </v-card>
 
     <item-dialog ref="itemDialog"/>
     <confirm-dialog ref="confirmDialog" />
+  </div>
 
-  </v-layout>
+  <div v-else class="pa-1">
+    <!-- No checklist selected -->
+    <v-card>
+      <v-toolbar card prominent color="secondary" class="checklist-header">
+        <v-toolbar-title class="body-2">
+          <span class="white--text headline">No checklist selected</span>
+        </v-toolbar-title>
+      </v-toolbar>
+    </v-card>
+  </div>
 </template>
 
 <script>
@@ -219,6 +213,10 @@ export default {
       // when checklist_id changes, load a new checklist
       this.loadChecklist()
     }
+  },
+
+  mounted () {
+    this.loadChecklist()
   },
 
   methods: {
@@ -572,20 +570,29 @@ export default {
 </script>
 
 <style scoped>
+
 .checked {
   color: #aaa;
   text-decoration: line-through;
 }
 
-.nopadding >>> .v-list__tile {
+>>> .v-card__text {
+  padding: 4px !important;
+}
+
+>>> .v-list__tile {
   padding: 0 !important;
 }
 
-.theme-default >>> .calendar-task {
+>>> .v-list__tile__avatar {
+  min-width: 40px !important;
+}
+
+>>> .calendar-task {
 	background-color:#f9aa33;
   border-radius:0;
 }
-.theme-default >>> .calendar-overdue {
+>>> .calendar-overdue {
 	background-color:#ff0000;
   border-radius:0;
   color: white;

@@ -8,70 +8,37 @@
       app
     >
       <v-list dense>
-        <!-- items for today -->
-        <v-list-tile>
+        <!-- group name -->
+        <v-list-tile v-for="group in groups" @click="loadGroup(group)" :key="group._id">
           <v-list-tile-content>
-            <v-list-tile-title
-              class="pointable"
-              @click.stop="activeChecklistId = 'today'"
-              ><v-icon>today</v-icon> Today
-            </v-list-tile-title>
+            <v-list-tile-title>{{group.name}}</v-list-tile-title>
           </v-list-tile-content>
+          <!-- add checklists or delete the group. if it is the active group -->
+          <v-list-tile-action v-if="isGroupActive(group._id)">
+            <v-flex xs12>
+              <v-tooltip bottom>
+                <v-btn
+                  flat icon color="primary"
+                  slot="activator"
+                  @click.stop="newChecklist(group._id, 'New checklist')">
+                  <v-icon>add</v-icon>
+                </v-btn>
+                <span>Add a new checklist to the group</span>
+              </v-tooltip>
+              <!-- you can only delete the group if not empty -->
+              <v-tooltip bottom>
+                <v-btn
+                  flat icon color="error"
+                  slot="activator"
+                  :disabled="group.checklists !== undefined && group.checklists.length != 0"
+                  @click.stop="deleteGroup(group._id)">
+                  <v-icon>delete</v-icon>
+                </v-btn>
+                <span>If empty, delete the group</span>
+              </v-tooltip>
+            </v-flex>
+          </v-list-tile-action>
         </v-list-tile>
-
-        <v-list-group
-          v-for="group in groups"
-          v-model="group._active"
-          :key="group._id"
-          @click="loadGroup(group)"
-          prepend-icon="view_agenda">
-
-          <!-- group name -->
-          <v-list-tile slot="activator">
-            <v-list-tile-content>
-              <v-list-tile-title>{{group.name}}</v-list-tile-title>
-            </v-list-tile-content>
-            <!-- add checklists or delete the group. if it is the active group -->
-            <v-list-tile-action v-if="isGroupActive(group._id)">
-              <v-flex xs12>
-                <v-tooltip bottom>
-                  <v-btn
-                    flat icon color="primary"
-                    slot="activator"
-                    @click.stop="newChecklist(group._id, 'New checklist')">
-                    <v-icon>add</v-icon>
-                  </v-btn>
-                  <span>Add a new checklist to the group</span>
-                </v-tooltip>
-                <!-- you can only delete the group if not empty -->
-                <v-tooltip bottom>
-                  <v-btn
-                    flat icon color="error"
-                    slot="activator"
-                    :disabled="group.checklists !== undefined && group.checklists.length != 0"
-                    @click.stop="deleteGroup(group._id)">
-                    <v-icon>delete</v-icon>
-                  </v-btn>
-                  <span>If empty, delete the group</span>
-                </v-tooltip>
-              </v-flex>
-            </v-list-tile-action>
-          </v-list-tile>
-          <!-- List of checklist in group -->
-          <v-list-tile
-            v-if="isGroupActive(group._id)"
-            v-for="checklist in group.checklists"
-            :key="checklist._id"
-          >
-            <v-list-tile-content>
-              <v-list-tile-title
-                @click="activeChecklistId = checklist._id"
-                class="pointable">
-                {{checklist.name}}
-              </v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
-        </v-list-group>
 
         <!-- Add a new group-->
         <v-text-field
@@ -103,16 +70,20 @@
     </v-toolbar>
 
     <!-- Main content -->
-    <v-content>
-      <check-list
-        :checklist-id="activeChecklistId"
-        :available-groups="groups"
-        @checklistDeleted="loadGroup(activeGroup)"
-        @checklistMoved="checklistMoved"
-        @checklistDuplicated="checklistDuplicated"
-        @showError="$emit('showError', $event)"
-        @showWarning="$emit('showWarning', $event)"
-        />
+    <v-content v-if="activeGroup">
+      <v-layout row wrap align-content-space-around justify-space-around fill-height>
+        <v-flex xs12 sm6 lg3 v-for="checklist in activeGroup.checklists" :key="checklist._id">
+          <check-list
+            :checklist-id="checklist._id"
+            :available-groups="groups"
+            @checklistDeleted="loadGroup(activeGroup)"
+            @checklistMoved="checklistMoved"
+            @checklistDuplicated="checklistDuplicated"
+            @showError="$emit('showError', $event)"
+            @showWarning="$emit('showWarning', $event)"
+            />
+          </v-flex>
+        </v-layout>
     </v-content>
 
     <confirm-dialog ref="confirmDialog" />
@@ -125,8 +96,6 @@ import CheckList from '@/components/CheckList.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import mytasks from '@/libs/mytasksclient.js'
 
-const DEFAULT_CHECKLIST = 'today'
-
 export default {
   components: {
     CheckList,
@@ -135,7 +104,6 @@ export default {
   data: () => ({
     showDrawer: false,
     newGroupName: '',
-    activeChecklistId: null,
     activeGroup: null,
     activeUser: null,
     groups: []
@@ -196,14 +164,14 @@ export default {
       // loads a user from its uri
       mytasks.get(useruri).then(response => {
         this.activeUser = response.data
-        this.groups = response.data.groups
-        this.activeChecklistId = DEFAULT_CHECKLIST
+        this.groups = [{name: "Today", checklists: [{_id: 'today'}]}, ...response.data.groups]
+        this.activeGroup = this.groups[0]
       }, error => {
         this.$emit('showError', error)
       })
     },
 
-    loadGroup(group, checklistId) {
+    loadGroup(group) {
       /* get data about a group from the server, and set it as active.
 
       If a checklistIf is passed, load also the checklist */
@@ -217,7 +185,6 @@ export default {
 
             // set activegroup
             this.activeGroup = this.groups[i]
-            this.activeChecklistId = checklistId
           } else {
             this.groups[i].active = false
           }
@@ -236,7 +203,6 @@ export default {
 
             // set activegroup
             this.activeGroup = this.groups[i]
-            this.activeChecklistId = checklistId
           } else {
             this.groups[i].active = false
           }
@@ -263,7 +229,6 @@ export default {
       // delete a group given its identifier
       if(this.activeGroup !== null && this.activeGroup._id === groupId) {
         this.activeGroup = null
-        this.activeChecklist = null
       }
       let group = this.getGroupById(groupId)
       if(group === null) {
@@ -309,7 +274,6 @@ export default {
           }
           group.checklists.push(response.data)
           this.activeGroup = group
-          this.activeChecklistId = response.data._id
         }
       }).catch( error => {
         this.$emit('showError', error)
