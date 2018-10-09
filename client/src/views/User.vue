@@ -57,7 +57,7 @@
     <!--  Title and toolbar !-->
     <v-toolbar app fixed clipped-left color="primary darken-4" dark>
         <v-toolbar-side-icon @click.stop="showDrawer = !showDrawer"></v-toolbar-side-icon>
-        <v-toolbar-title>MyTasks</v-toolbar-title>
+        <v-toolbar-title>MyTasks<span v-if="activeGroup">: {{ activeGroup.name }}</span></v-toolbar-title>
 
         <v-spacer></v-spacer>
 
@@ -176,8 +176,10 @@ export default {
 
       If a checklistIf is passed, load also the checklist */
 
+      this.showDrawer = false
+
       if(!group._id || !group.uri) {
-        // it is a special group: do not request additional informatio, use what you have in the memory
+        // it is a special group: do not request additional information, use what you have in the memory
         for(var i=0; i<this.groups.length; i++) {
           if(this.groups[i].name === group.name) {
             // we must set this because it is set in the v-list v-model

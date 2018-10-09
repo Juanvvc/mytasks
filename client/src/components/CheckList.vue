@@ -4,22 +4,9 @@
       <v-toolbar card prominent color="secondary" class="checklist-header">
         <!-- name -->
         <v-toolbar-title class="body-2">
-          <v-text-field v-if="editingName" label="Name" v-model="newName" @keyup.enter="saveName()"></v-text-field>
-          <span v-else  class="white--text headline"  @dblclick="editName()">{{checklist.name}}</span>
+          <span class="white--text headline"  @dblclick="editChecklist()">{{checklist.name}}</span>
         </v-toolbar-title>
         <v-spacer />
-        <!-- Select group, only if the checklist is editable -->
-        <!--v-flex xs2 sm3>
-          <v-select
-           placeholder="GROUP"
-           v-if="isEditable()"
-           v-model="checklist._parentid"
-           :items="availableGroups"
-           item-text="name"
-           item-value="_id"
-           @change="moveChecklist(checklist._parentid)"
-           />
-        </v-flex-->
         <!-- toggles -->
         <v-tooltip bottom v-if="isEditable()">
           <v-btn small slot="activator" :dark="!checklist.hide_done_items" icon @click="updateChecklist({hide_done_items: !checklist.hide_done_items})">
@@ -45,6 +32,7 @@
           </v-btn>
 
           <v-list>
+            <v-list-tile class="pointable"><v-list-tile-title @click="editChecklist">Properties...</v-list-tile-title></v-list-tile>
             <v-list-tile class="pointable"><v-list-tile-title @click="duplicateChecklist">Duplicate checklist</v-list-tile-title></v-list-tile>
             <v-list-tile class="pointable"><v-list-tile-title @click="clearChecklist">Remove done items</v-list-tile-title></v-list-tile>
             <v-list-tile class="pointable"><v-list-tile-title @click="deleteChecklist">Delete checklist</v-list-tile-title></v-list-tile>
@@ -66,9 +54,8 @@
         </calendar-view>
       </v-card-text>
       <v-card-text v-else>
-        <v-textarea v-if="editingDescription" label="Description" v-model="newDescription" @keyup.enter="saveDescription()"></v-textarea>
-        <p v-else-if="checklist.description" @dblclick="editDescription()"><b>Description:</b> {{checklist.description}}</p>
-        <p v-else @dblclick="editDescription()"><b>No description</b></p>
+        <p v-if="checklist.description"><b>Description:</b> {{checklist.description}}</p>
+        <p v-else><b>No description</b></p>
 
         <v-list dense class="nopadding">
           <vue-draggable v-model="checklist.items" @start="drag=true" @end="finishItemDrag()" :options="{handle:'.handle', disabled: !isEditable()}">
@@ -93,6 +80,10 @@
                         <v-tooltip bottom v-if="isEditable()" >
                           <v-icon slot="activator" class="handle movable">drag_indicator</v-icon>
                           <span>Move item</span>
+                        </v-tooltip>
+                        <v-tooltip bottom v-if="isItemEditable(item)" >
+                          <v-icon slot="activator" class="pointer" @click="editItem(item)">edit</v-icon>
+                          <span>Edit item</span>
                         </v-tooltip>
                         <span v-if="isEditable()">&nbsp;</span>
                       </span>
@@ -153,6 +144,7 @@
     </v-card>
 
     <item-dialog ref="itemDialog"/>
+    <checklist-dialog ref="checklistDialog" :available-groups="availableGroups" />
     <confirm-dialog ref="confirmDialog" />
   </div>
 
@@ -172,6 +164,8 @@
 
 import ItemDialog from '@/components/ItemDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ChecklistDialog from '@/components/ChecklistDialog.vue'
+
 import VueDraggable from 'vuedraggable'
 import { CalendarView, CalendarViewHeader } from "vue-simple-calendar"
 require("vue-simple-calendar/static/css/default.css")
@@ -183,7 +177,8 @@ export default {
     VueDraggable,
     ConfirmDialog,
     CalendarView,
-    CalendarViewHeader
+    CalendarViewHeader,
+    ChecklistDialog
   },
 
   props: {
@@ -199,10 +194,6 @@ export default {
   data: () => ({
     checklist: null,
     newItemName: '',
-    editingName: false,
-    newName: '',
-    editingDescription: false,
-    newDescription: '',
     drag: false,
     showCalendar: false,
     calendarEvents: []
@@ -308,7 +299,7 @@ export default {
         this.$emit('showWarning', 'This item cannot be edited')
         return
       }
-      mytasks.post(item.uri, newItemData).then(response => {
+      return mytasks.post(item.uri, newItemData).then(response => {
         this.$set(item, 'checked', response.data.checked)
         this.$set(item, 'name', response.data.name)
         this.$set(item, 'comment', response.data.comment)
@@ -360,6 +351,30 @@ export default {
       })
     },
 
+    editChecklist() {
+      if(!this.isEditable()) {
+        this.$emit('showWarning', 'This checklist cannot be edited')
+        return
+      }
+      this.$refs.checklistDialog.show(this.checklist).then(result => {
+        if(result !== null) {
+          if(result.name === null || result.name === '') {
+            // if the name is empty, delete the checklist
+            this.deleteChecklist()
+          } else {
+            var oldgroup = this.checklist._parentid
+            // save the checklist
+            this.updateChecklist(result).then( response => {
+              // if the group changed, trigger an event
+              if(response && oldgroup !== result.__parentid) {
+                this.$emit('checklistMoved', this.checklist, result._parentid)
+              }
+            })
+          }
+        }
+      })
+    },
+
     editItem (item) {
       if(!this.isItemEditable(item)) {
         this.$emit('showWarning', 'This item cannot be edited')
@@ -400,70 +415,6 @@ export default {
           this.checklist = response.data
         })
       })
-    },
-
-    moveChecklist(toGroupId) {
-      if(!this.isEditable()){
-        this.$emit('showWarning', 'This checklist cannot be edited')
-        return
-      }
-
-      this.updateChecklist({_parentid: toGroupId}).then( () => {
-        this.$emit('checklistMoved', this.checklist, toGroupId)
-      })
-    },
-
-    editDescription () {
-      if(!this.isEditable()){
-        this.$emit('showWarning', 'This checklist cannot be edited')
-        return
-      }
-
-      // active the edit description dialog
-      this.editingDescription = true
-      if(this.checklist !== undefined && this.checklist.description !== undefined) {
-        this.newDescription = this.checklist.description
-      } else {
-        this.newDescription = ''
-      }
-    },
-
-    saveDescription () {
-      if(!this.isEditable()){
-        this.$emit('showWarning', 'This checklist cannot be edited')
-        return
-      }
-
-      // save the new description
-      this.updateChecklist({description: this.newDescription.trim()})
-      this.updateCh
-      this.editingDescription = false
-    },
-
-    editName () {
-      if(!this.isEditable()){
-        this.$emit('showWarning', 'This checklist cannot be edited')
-        return
-      }
-
-      // active the edit name dialog
-      this.editingName = true
-      this.newName = this.checklist.name
-    },
-
-    saveName () {
-      if(!this.isEditable()){
-        this.$emit('showWarning', 'This checklist cannot be edited')
-        return
-      }
-
-      // save the new name
-      if(this.newName === '') {
-        this.$emit('showError', 'The name cannot be empty')
-        return
-      }
-      this.updateChecklist({name: this.newName.trim()})
-      this.editingName = false
     },
 
     finishItemDrag() {
