@@ -14,6 +14,7 @@ def get_blueprint(auth=None):
     blueprint.add_url_rule('/checklists/<_id>/clear', view_func=auth.login_required(clear_checklist), methods=['POST'], endpoint='clear')
     blueprint.add_url_rule('/checklists/<_id>/duplicate', view_func=auth.login_required(duplicate_checklist), methods=['POST'], endpoint='duplicate')
     blueprint.add_url_rule('/checklists/today', view_func=auth.login_required(today_checklist), methods=['GET'], endpoint='today')
+    blueprint.add_url_rule('/checklists/history', view_func=auth.login_required(history_checklist), methods=['GET'], endpoint='history')
 
     return blueprint
 
@@ -207,6 +208,41 @@ def today_checklist():
             # checked not equal True also includes items without the checked field (default: checked=false)
             # also, do not include empty due_date
             filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gt': '', '$lt': to_date}}]}
+            if model.db.items.count_documents(filter) > 0:
+                items = model.db.items.find(filter)
+                checklist['items'].append({'name': '# {}'.format(c['name'])})
+                for i in items:
+                    if '_id' in i:
+                        i['_id'] = str(i['_id'])
+                    if '_parentid' in i:
+                        i['_parentid'] = str(i['_parentid'])
+                    i['uri'] = flask.url_for('items.info', _id=i['_id'], _external=True)
+                    checklist['items'].append(i)
+
+    return flask.jsonify(checklist)
+
+
+def history_checklist():
+    """Gets a special checklist with checked items during the last week. """
+
+    from_date = datetime.datetime.combine(datetime.date.today() - datetime.timedelta(days=7), datetime.time(0, 0, 0)).isoformat()[:10]
+
+    checklist = {
+        'name': 'Today',
+        'description': 'Completed items after {}'.format(from_date),
+        'hide_done_items': False,
+        'items': []
+    }
+
+    groups = model.available_groups(flask.g.user_id)
+    for g in groups:
+        if '_id' not in g:
+            continue
+        checklists = model.available_checklists(g['_id'])
+        for c in checklists:
+            # checked not equal True also includes items without the checked field (default: checked=false)
+            # also, do not include empty due_date
+            filter = {'$and': [{'_parentid': c['_id']}, {'checked': True}, {'done_date': {'$gte': from_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {}'.format(c['name'])})

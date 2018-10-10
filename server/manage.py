@@ -1,6 +1,5 @@
 import os
 import click
-import unittest
 from flask_cors import CORS
 import flask
 import project.views
@@ -46,6 +45,7 @@ def useradd(username, password):
 @app.cli.command()
 def test():
     """Runs the unit tests without test coverage."""
+    import unittest
     app.config.from_object('project.server.config.TestingConfig')
     project.model.configure_model(app)
 

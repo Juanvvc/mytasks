@@ -8,8 +8,32 @@
       app
     >
       <v-list dense>
+        <!-- Today (specialGroups[0]) -->
+        <v-list-tile @click="loadGroup(specialGroups[0])">
+          <v-list-tile-action>
+            <v-icon>today</v-icon>
+          </v-list-tile-action>
+          <v-list-tile-content>
+            <v-list-tile-title>{{specialGroups[0].name}}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+        <!-- History (specialGroups[1]) -->
+        <v-list-tile @click="loadGroup(specialGroups[1])">
+          <v-list-tile-action>
+            <v-icon>history</v-icon>
+          </v-list-tile-action>
+          <v-list-tile-content>
+            <v-list-tile-title>{{specialGroups[1].name}}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
+        <v-subheader class="mt-3 grey--text text--darken-1">GROUPS</v-subheader>
+
         <!-- group name -->
         <v-list-tile v-for="group in groups" @click="loadGroup(group)" :key="group._id">
+          <v-list-tile-action>
+            <v-icon>group_work</v-icon>
+          </v-list-tile-action>
           <v-list-tile-content>
             <v-list-tile-title>{{group.name}}</v-list-tile-title>
           </v-list-tile-content>
@@ -106,6 +130,7 @@ export default {
     newGroupName: '',
     activeGroup: null,
     activeUser: null,
+    specialGroups: [],
     groups: []
   }),
 
@@ -164,33 +189,25 @@ export default {
       // loads a user from its uri
       mytasks.get(useruri).then(response => {
         this.activeUser = response.data
-        this.groups = [{name: "Today", checklists: [{_id: 'today'}]}, ...response.data.groups]
-        this.activeGroup = this.groups[0]
+        this.specialGroups = [
+          {name: "Today", checklists: [{_id: 'today'}]},
+          {name: "History", checklists: [{_id: 'history'}]}
+        ]
+        this.groups = response.data.groups
+        this.activeGroup = this.specialGroups[0]
       }, error => {
         this.$emit('showError', error)
       })
     },
 
     loadGroup(group) {
-      /* get data about a group from the server, and set it as active.
-
-      If a checklistIf is passed, load also the checklist */
+      /* get data about a group from the server, and set it as active. */
 
       this.showDrawer = false
 
       if(!group._id || !group.uri) {
         // it is a special group: do not request additional information, use what you have in the memory
-        for(var i=0; i<this.groups.length; i++) {
-          if(this.groups[i].name === group.name) {
-            // we must set this because it is set in the v-list v-model
-            this.groups[i]._active = true
-
-            // set activegroup
-            this.activeGroup = this.groups[i]
-          } else {
-            this.groups[i].active = false
-          }
-        }
+        this.activeGroup = group
         return
       }
 
@@ -199,14 +216,10 @@ export default {
           if(this.groups[i]._id === group._id) {
             // set data
             this.groups[i] = response.data
-
-            // we must set this because it is set in the v-list v-model
-            this.groups[i]._active = true
-
             // set activegroup
             this.activeGroup = this.groups[i]
-          } else {
-            this.groups[i].active = false
+
+            break
           }
         }
       }).catch( error => {
