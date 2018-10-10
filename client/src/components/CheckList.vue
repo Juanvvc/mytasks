@@ -31,7 +31,7 @@
             <v-icon>more_vert</v-icon>
           </v-btn>
 
-          <v-list>
+          <v-list class="px-3">
             <v-list-tile class="pointable"><v-list-tile-title @click="editChecklist">Properties...</v-list-tile-title></v-list-tile>
             <v-list-tile class="pointable"><v-list-tile-title @click="duplicateChecklist">Duplicate checklist</v-list-tile-title></v-list-tile>
             <v-list-tile class="pointable"><v-list-tile-title @click="clearChecklist">Remove done items</v-list-tile-title></v-list-tile>
@@ -120,8 +120,7 @@
                         <span v-if="isEditable()">&nbsp;</span>
                       </span>
                       <span
-                        color="secondary"
-                        class="header orange--text ligthen-1">
+                        class="accent--text subheader">
                         {{ item.name }}
                       </span>
                     </v-layout>
@@ -528,15 +527,15 @@ export default {
 }
 
 >>> .v-card__text {
-  padding: 4px !important;
+  padding: 4px;
 }
 
 >>> .v-list__tile {
-  padding: 0 !important;
+  padding: 0;
 }
 
 >>> .v-list__tile__avatar {
-  min-width: 40px !important;
+  min-width: 40px;
 }
 
 >>> .calendar-task {

@@ -96,7 +96,7 @@
     <!-- Main content -->
     <v-content v-if="activeGroup">
       <v-layout row wrap align-content-space-around justify-space-around fill-height>
-        <v-flex xs12 sm6 lg3 v-for="checklist in activeGroup.checklists" :key="checklist._id">
+        <v-flex xs12 sm6 lg4 v-for="checklist in activeGroup.checklists" :key="checklist._id">
           <check-list
             :checklist-id="checklist._id"
             :available-groups="groups"

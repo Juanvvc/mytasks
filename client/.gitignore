@@ -2,6 +2,8 @@
 node_modules
 /dist
 public/local.js
+public/local.css
+public/wallpaper.jpg
 
 # local env files
 .env.local

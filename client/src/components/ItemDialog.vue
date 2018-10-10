@@ -3,7 +3,7 @@
        <v-card>
            <v-card-title class="headline">{{ title }}</v-card-title>
 
-           <v-layout column>
+           <v-layout column class="px-3">
              <v-text-field
               label="Name"
               placeholder="Name"
