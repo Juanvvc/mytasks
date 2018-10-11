@@ -106,8 +106,25 @@
             @showError="$emit('showError', $event)"
             @showWarning="$emit('showWarning', $event)"
             />
-          </v-flex>
-        </v-layout>
+        </v-flex>
+      </v-layout>
+
+      <!-- float button: add a new checklist (only if no special group) -->
+      <v-tooltip top v-if="!isSpecialGroup(activeGroup)">
+        <v-btn
+          slot="activator"
+          color="secondary"
+          dark
+          fab
+          fixed
+          bottom
+          right
+          @click="newChecklist(activeGroup._id, 'New checklist')"
+        >
+          <v-icon>add</v-icon>
+        </v-btn>
+        <span>Add a new checklist</span>
+      </v-tooltip>
     </v-content>
 
     <confirm-dialog ref="confirmDialog" />
@@ -125,6 +142,7 @@ export default {
     CheckList,
     ConfirmDialog
   },
+
   data: () => ({
     showDrawer: false,
     newGroupName: '',
@@ -171,6 +189,11 @@ export default {
       return this.activeGroup !== null && this.activeGroup._id === groupId
     },
 
+    isSpecialGroup(group) {
+      // Returns True if the group is special. i.e, not editable by the user
+      return !group || !(group.uri || group._id)
+    },
+
     getGroupById(groupId) {
       // Returns a group from its group identifier
       if(this.groups === null) {
@@ -205,7 +228,7 @@ export default {
 
       this.showDrawer = false
 
-      if(!group._id || !group.uri) {
+      if(this.isSpecialGroup(group)) {
         // it is a special group: do not request additional information, use what you have in the memory
         this.activeGroup = group
         return
