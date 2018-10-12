@@ -210,7 +210,7 @@ def today_checklist():
             filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gt': '', '$lt': to_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
-                checklist['items'].append({'name': '# {}'.format(c['name'])})
+                checklist['items'].append({'name': '# {} # {}'.format(g['name'], c['name'])})
                 for i in items:
                     if '_id' in i:
                         i['_id'] = str(i['_id'])

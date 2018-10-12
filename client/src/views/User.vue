@@ -9,7 +9,7 @@
     >
       <v-list dense>
         <!-- Today (specialGroups[0]) -->
-        <v-list-tile @click="loadGroup(specialGroups[0])">
+        <v-list-tile v-if="specialGroups" @click="loadGroup(specialGroups[0])">
           <v-list-tile-action>
             <v-icon>today</v-icon>
           </v-list-tile-action>
@@ -18,7 +18,7 @@
           </v-list-tile-content>
         </v-list-tile>
         <!-- History (specialGroups[1]) -->
-        <v-list-tile @click="loadGroup(specialGroups[1])">
+        <v-list-tile v-if="specialGroups" @click="loadGroup(specialGroups[1])">
           <v-list-tile-action>
             <v-icon>history</v-icon>
           </v-list-tile-action>

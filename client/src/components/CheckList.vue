@@ -364,8 +364,8 @@ export default {
             var oldgroup = this.checklist._parentid
             // save the checklist
             this.updateChecklist(result).then( response => {
-              // if the group changed, trigger an event
-              if(response && oldgroup !== result.__parentid) {
+              if(response && oldgroup !== result._parentid) {
+                // if the group changed, trigger an event
                 this.$emit('checklistMoved', this.checklist, result._parentid)
               }
             })

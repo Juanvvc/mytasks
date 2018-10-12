@@ -4,6 +4,6 @@ server/config.py
 __pycache__
 *.swp
 server/tmp
-dump
+server/dump
 client/publish.sh
 test

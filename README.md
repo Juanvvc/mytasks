@@ -63,4 +63,23 @@ yarn
 yarn serve
 ```
 
-Background: https://www.drodd.com/html7/blue.html
+### Configuration
+
+Create a file named `client/public/local/local.js` and  `client/public/local/local.css`.
+These files are local and SHOULDN'T be added to git. Example:
+
+```
+/* local.js */
+window.MYTASKS_SERVER='https://myserver.com/mytasks/api';
+```
+
+```
+/* local.css */
+.application--wrap {
+  /* Set the background here and not in App.vue to prevent attaching the background to the application */
+  background-color: #ccccde;
+  background-image: url("wallpaper.jpg");
+  background-size: auto;
+  background-attachment: fixed;
+}
+```

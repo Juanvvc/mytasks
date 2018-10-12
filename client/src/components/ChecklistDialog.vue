@@ -11,8 +11,17 @@
               clearable
               @keyup.enter="click(true)"
               prepend-icon="translate" />
+              <v-text-field
+               placeholder="Priority"
+               label="Priority"
+               hint="Used to order checklists in a group. A higher number means a higher priority"
+               v-model="order"
+               clearable
+               prepend-icon="reorder"
+               />
               <v-select
-               placeholder="GROUP"
+               placeholder="Group"
+               label="Group"
                v-model="parentid"
                :items="availableGroups"
                item-text="name"
@@ -52,6 +61,7 @@ export default {
     description: '',
     parentid: 0,
     groups: [],
+    order: null,
     menuDate: false
   }),
 
@@ -63,7 +73,9 @@ export default {
 
       this.name = ( config.name === undefined ? this.name : config.name )
       this.description = ( config.description === undefined ? this.description : config.description )
-      this.parentid = (config._parentid === undefined ? this._parentid : config._parentid)
+      this.parentid = (config._parentid === undefined ? this.parentid : config._parentid)
+      this.order = (config._order === undefined ? this.order : config._order)
+
 
       this.visible = true;
 
@@ -77,11 +89,13 @@ export default {
         this.resolve({
           name: (this.name!==null?this.name.trim():''),
           description: (this.description!==null?this.description.trim():''),
-          _parentid: this.parentid
+          _parentid: this.parentid,
+          _order: this.order
         })
         this.name = ''
         this.comment = ''
-        this._parentid = null
+        this.parentid = null
+        this.order = null
       }
     }
   }

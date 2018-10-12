@@ -275,7 +275,7 @@ def available_checklists(group_id):
             group_id = ObjectId(group_id)
         except InvalidId:
             return []
-    return db.checklists.find({'_parentid': group_id}, {'name': 1, '_parentid': 1})
+    return db.checklists.find({'_parentid': group_id}, {'name': 1, '_order': 1, '_parentid': 1}).sort('_order', pymongo.DESCENDING)
 
 
 def create_user(name, password=None):
