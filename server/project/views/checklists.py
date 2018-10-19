@@ -242,7 +242,7 @@ def history_checklist():
         for c in checklists:
             # checked not equal True also includes items without the checked field (default: checked=false)
             # also, do not include empty due_date
-            filter = {'$and': [{'parentid': c['_id']}, {'checked': True}, {'done_date': {'$gte': from_date}}]}
+            filter = {'$and': [{'parentid': c['_id']}, {'checked': {'$not': True}}, {'done_date': {'$gte': from_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {}'.format(c['name'])})
@@ -252,6 +252,9 @@ def history_checklist():
                     if 'parentid' in i:
                         i['parentid'] = str(i['parentid'])
                     i['uri'] = flask.url_for('items.info', _id=i['_id'], _external=True)
+                    i['_show_on'] = i['done_date']
                     checklist['items'].append(i)
+
+            # TODO: include recursive events
 
     return flask.jsonify(checklist)
