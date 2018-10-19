@@ -33,7 +33,7 @@ def new_checklist():
     new_info.pop('_id', None)
 
     # check the group
-    group_id = new_info.get('_parentid', None)
+    group_id = new_info.get('parentid', None)
     if group_id is None:
         flask.abort(400, 'A checklists needs a group')
     group = model.search_element(model.Group, group_id)
@@ -120,7 +120,7 @@ def delete_checklist(_id):
         flask.abort(401, 'You are not allowed to edit this checklist')
 
     # delete all items in the list
-    model.db.items.remove({'_parentid': checklist.id()})
+    model.db.items.remove({'parentid': checklist.id()})
 
     if checklist.delete():
         return flask.jsonify({'status': 200, 'message': 'Checklist {} deleted'.format(_id)})
@@ -141,7 +141,7 @@ def clear_checklist(_id):
 
     new_items = list()
     # remove all done items
-    model.db.items.remove({'_parentid': checklist.id(), 'checked': True})
+    model.db.items.remove({'parentid': checklist.id(), 'checked': True})
     for item in checklist.info.get('items', []):
         # check if the items in the array still exist
         if model.db.items.find_one({'_id': item['_id']}):
@@ -207,15 +207,15 @@ def today_checklist():
         for c in checklists:
             # checked not equal True also includes items without the checked field (default: checked=false)
             # also, do not include empty due_date
-            filter = {'$and': [{'_parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gt': '', '$lt': to_date}}]}
+            filter = {'$and': [{'parentid': c['_id']}, {'checked': {'$not': {'$eq': True}}}, {'due_date': {'$gt': '', '$lt': to_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {} # {}'.format(g['name'], c['name'])})
                 for i in items:
                     if '_id' in i:
                         i['_id'] = str(i['_id'])
-                    if '_parentid' in i:
-                        i['_parentid'] = str(i['_parentid'])
+                    if 'parentid' in i:
+                        i['parentid'] = str(i['parentid'])
                     i['uri'] = flask.url_for('items.info', _id=i['_id'], _external=True)
                     checklist['items'].append(i)
 
@@ -242,15 +242,15 @@ def history_checklist():
         for c in checklists:
             # checked not equal True also includes items without the checked field (default: checked=false)
             # also, do not include empty due_date
-            filter = {'$and': [{'_parentid': c['_id']}, {'checked': True}, {'done_date': {'$gte': from_date}}]}
+            filter = {'$and': [{'parentid': c['_id']}, {'checked': True}, {'done_date': {'$gte': from_date}}]}
             if model.db.items.count_documents(filter) > 0:
                 items = model.db.items.find(filter)
                 checklist['items'].append({'name': '# {}'.format(c['name'])})
                 for i in items:
                     if '_id' in i:
                         i['_id'] = str(i['_id'])
-                    if '_parentid' in i:
-                        i['_parentid'] = str(i['_parentid'])
+                    if 'parentid' in i:
+                        i['parentid'] = str(i['parentid'])
                     i['uri'] = flask.url_for('items.info', _id=i['_id'], _external=True)
                     checklist['items'].append(i)
 

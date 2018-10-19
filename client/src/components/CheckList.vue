@@ -104,17 +104,17 @@
                 </v-list-tile-sub-title>
               </v-list-tile-content>
               <!-- items that are actually a section -->
-              <v-list-tile-content class="handle" @dblclick="editItem(item)" v-else>
+              <v-list-tile-content @dblclick="editItem(item)" v-else>
                 <v-list-tile-title>
                   <v-hover>
                     <v-layout row slot-scope="{ hover }">
                       <span sm1 v-if="hover"> <!-- sections in special checklists cannot be edited -->
                         <v-tooltip bottom v-if="isEditable()" >
-                          <v-icon color="secondary" slot="activator" class="handle movable">drag_indicator</v-icon>
+                          <v-icon color="accent" slot="activator" class="handle movable">drag_indicator</v-icon>
                           <span>Move item</span>
                         </v-tooltip>
                         <v-tooltip bottom v-if="isItemEditable(item)">
-                          <v-icon color="secondary" slot="activator" class="pointable" @click="promoteSection(item)">assignment</v-icon>
+                          <v-icon color="accent" slot="activator" class="pointable" @click="promoteSection(item)">assignment</v-icon>
                           <span>Promote section to checklist</span>
                         </v-tooltip>
                         <span v-if="isEditable()">&nbsp;</span>
@@ -281,7 +281,7 @@ export default {
 
       let newItemInfo = {
         name: name,
-        _parentid: this.checklistId
+        parentid: this.checklistId
       }
       mytasks.post('/items/', newItemInfo).then( response => {
         if(this.checklist.items === null || this.checklist.items === undefined) {
@@ -361,12 +361,12 @@ export default {
             // if the name is empty, delete the checklist
             this.deleteChecklist()
           } else {
-            var oldgroup = this.checklist._parentid
+            var oldgroup = this.checklist.parentid
             // save the checklist
             this.updateChecklist(result).then( response => {
-              if(response && oldgroup !== result._parentid) {
+              if(response && oldgroup !== result.parentid) {
                 // if the group changed, trigger an event
-                this.$emit('checklistMoved', this.checklist, result._parentid)
+                this.$emit('checklistMoved', this.checklist, result.parentid)
               }
             })
           }
@@ -475,7 +475,7 @@ export default {
         mytasks.post('/checklists/', {
           name: this.checklist.name + ' ' + this.checklist.items[indexOfItem].name,
           items: new_items,
-          _parentid: this.checklist._parentid
+          parentid: this.checklist.parentid
         }).then( response => {
           if(!response) return
           // delete the items from the current checklist

@@ -86,7 +86,7 @@ def delete_group(_id):
         flask.abort(401, 'Not allowed to delete this group')
 
     # check the group is empty
-    if model.db.checklists.count({'_parentid': group.id()}) > 0:
+    if model.db.checklists.count({'parentid': group.id()}) > 0:
         flask.abort(401, 'Group is not empty')
 
     if group.delete():

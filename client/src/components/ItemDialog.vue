@@ -46,6 +46,13 @@
                   @input="menuDate = false" />
               </v-menu>
             </v-flex>
+            <v-text-field
+              placeholder="RRULE"
+              label="RRULE"
+              hint="RRULE, as defined in RFC5545"
+              v-model="rrule"
+              clearable
+              prepend-icon="repeat" />
            </v-layout>
 
            <v-card-actions>
@@ -67,7 +74,8 @@ export default {
     due_date: '',
     name: '',
     comment: '',
-    menuDate: false
+    menuDate: false,
+    rrule: ''
   }),
 
   methods: {
@@ -79,6 +87,7 @@ export default {
       this.name = ( config.name === undefined ? this.name : config.name )
       this.comment = ( config.comment === undefined ? this.comment : config.comment )
       this.due_date = ( config.due_date === undefined ? this.due_date : config.due_date )
+      this.rrule = (config.rrule === undefined ? this.rrule : config.rrule)
 
       this.visible = true;
 
@@ -92,11 +101,13 @@ export default {
         this.resolve({
           name: (this.name!==null?this.name.trim():''),
           comment: (this.comment!==null?this.comment.trim():''),
-          due_date: (this.due_date!==null?this.due_date.trim():'')
+          due_date: (this.due_date!==null?this.due_date.trim():''),
+          rrule: this.rrule
         })
         this.name = ''
         this.comment = ''
         this.due_date = ''
+        this.rrule = ''
       }
     }
   }

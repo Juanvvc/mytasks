@@ -58,7 +58,7 @@ class BaseElement(object):
         return dict(
             _id=str(self.id()),
             name=self.info.get('name', ''),
-            _parentid=self.info.get('_parentid', None)
+            parentid=self.info.get('parentid', None)
         )
 
     def sane_info(self):
@@ -66,8 +66,8 @@ class BaseElement(object):
         new_info = self.info.copy()
         if '_id' in new_info:
             new_info['_id'] = str(new_info['_id'])
-        if '_parentid' in new_info:
-            new_info['_parentid'] = str(new_info['_parentid'])
+        if 'parentid' in new_info:
+            new_info['parentid'] = str(new_info['parentid'])
         return new_info
 
     def save(self):
@@ -75,8 +75,8 @@ class BaseElement(object):
         try:
             if type(self.info['_id']) != ObjectId:
                 self.info['_id'] = ObjectId(self.info['_id'])
-            if '_parentid' in self.info and type(self.info['_parentid']) != ObjectId:
-                self.info['_parentid'] = ObjectId(self.info['_parentid'])
+            if 'parentid' in self.info and type(self.info['parentid']) != ObjectId:
+                self.info['parentid'] = ObjectId(self.info['parentid'])
         except InvalidId:
             return False
         self._collection.save(self.info)
@@ -84,13 +84,13 @@ class BaseElement(object):
 
     def visible_by(self, user_id):
         """ Returns True if user_id is allowed to access the BaseElement """
-        if self.info.get('_parentid') is not None:
+        if self.info.get('parentid') is not None:
             return self.parent().visible_by(user_id)
         return True
 
     def editable_by(self, user_id):
         """ Returns True if the user_id is allowed to edit or remove this BaseElement """
-        if self.info.get('_parentid') is not None:
+        if self.info.get('parentid') is not None:
             return self.parent().editable_by(user_id)
         return True
 
@@ -101,7 +101,7 @@ class BaseElement(object):
     def create_child(self, info):
         """ Creates a new chil in this element
 
-        If info includes an _id or a _parentid, it is ignored
+        If info includes an _id or a parentid, it is ignored
         """
         if self._children_class is None:
             raise Exception('This element type cannot have children')
@@ -110,11 +110,11 @@ class BaseElement(object):
         # ignore these fields, if exist
         new_info = info.copy()
         new_info.pop('_id', None)
-        new_info.pop('_parentid', None)
+        new_info.pop('parentid', None)
 
         # update the info and save
-        new_child.info.update(new_info)
-        new_child.info.update({'_parentid': self.id()})
+        new_child.update(new_info)
+        new_child.update({'parentid': self.id()})
         new_child.save()
         return new_child
 
@@ -124,9 +124,17 @@ class BaseElement(object):
         This method caches the first call to avoid requests to the database """
         if use_cached and hasattr(self, '_parent') and self._parent is not None:
             return self._parent
-        if '_parentid' not in self.info or not hasattr(self, '_parent_class'):
+        if 'parentid' not in self.info or not hasattr(self, '_parent_class'):
             return None
-        return search_element(self._parent_class, self.info.get('_parentid'))
+        return search_element(self._parent_class, self.info.get('parentid'))
+
+    def update(self, new_info):
+        """ Updates the information of this BaseElement.
+
+        Only information NOT starting with _ is updated. """
+        for key in new_info:
+            if not key.startswith('_'):
+                self.info[key] = new_info[key]
 
 
 class User(BaseElement):
@@ -139,7 +147,7 @@ class User(BaseElement):
         new_info = db.users.find_one({'_id': _id})
         if new_info is None:
             raise Exception('User not found: {}'.format(_id))
-        self.info.update(new_info)
+        self.update(new_info)
 
     def hash_password(self, password):
         """ Save a password hash in the user.
@@ -174,7 +182,7 @@ class Group(BaseElement):
         new_info = db.groups.find_one({'_id': _id})
         if new_info is None:
             raise Exception('Group not found: {}'.format(_id))
-        self.info.update(new_info)
+        self.update(new_info)
 
     def summary(self):
         return super().summary().update({'private': self.info.get('private', True)})
@@ -207,7 +215,7 @@ class Checklist(BaseElement):
         new_info = db.checklists.find_one({'_id': _id})
         if new_info is None:
             raise Exception('Checklist not found: {}'.format(_id))
-        self.info.update(new_info)
+        self.update(new_info)
 
     def delete_child(self, item_id):
         if 'items' not in self.info:
@@ -242,7 +250,7 @@ class Item(BaseElement):
         new_info = db.items.find_one({'_id': _id})
         if new_info is None:
             raise Exception('Item not found: {}'.format(_id))
-        self.info.update(new_info)
+        self.update(new_info)
 
 
 def available_users():
@@ -264,8 +272,8 @@ def available_groups(user_id, only_public=False):
         except InvalidId:
             return []
     if only_public:
-        return db.groups.find({'_parentid': user_id, 'private': False}, {'name': 1, 'private': 1})
-    return db.groups.find({'_parentid': user_id}, {'name': 1, 'private': 1})
+        return db.groups.find({'parentid': user_id, 'private': False}, {'name': 1, 'private': 1})
+    return db.groups.find({'parentid': user_id}, {'name': 1, 'private': 1})
 
 
 def available_checklists(group_id):
@@ -275,7 +283,7 @@ def available_checklists(group_id):
             group_id = ObjectId(group_id)
         except InvalidId:
             return []
-    return db.checklists.find({'_parentid': group_id}, {'name': 1, '_order': 1, '_parentid': 1}).sort('_order', pymongo.DESCENDING)
+    return db.checklists.find({'parentid': group_id}, {'name': 1, 'order': 1, 'parentid': 1}).sort('order', pymongo.DESCENDING)
 
 
 def create_user(name, password=None):
@@ -315,7 +323,7 @@ def search_element(element_class, element_id):
             return None
     try:
         return element_class(element_id)
-    except Exception as exc:
+    except Exception:
         return None
 
 

@@ -22,7 +22,7 @@ def new_item():
         flask.abort(400, 'An item needs a name')
 
     # check the checklist
-    checklist_id = new_info.get('_parentid', None)
+    checklist_id = new_info.get('parentid', None)
     if checklist_id is None:
         flask.abort(400, 'A checklists needs a name')
     checklist = model.search_element(model.Checklist, checklist_id)
@@ -78,8 +78,8 @@ def delete_item(_id):
         flask.abort(401, 'You are not allowed to edit this item')
 
     # delete the item from the checklist
-    if '_parentid' in item.info:
-        checklist = model.search_element(model.Checklist, item.info['_parentid'])
+    if 'parentid' in item.info:
+        checklist = model.search_element(model.Checklist, item.info['parentid'])
         if checklist is None:
             flask.current_app.logger.error('Removing Item %s and checklist not found', _id)
         elif not checklist.delete_child(_id):

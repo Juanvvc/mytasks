@@ -15,14 +15,14 @@ class TestModel(unittest.TestCase):
     def setUp(self):
         # create a user 0
         self.user0 = model.db.users.insert({'name': 'NAME0'})
-        self.group0 = model.db.groups.insert({'name': 'GROUP0', '_parentid': self.user0, 'private': True})
-        self.checklist0 = model.db.checklists.insert({'name': 'CHECKLIST0', '_parentid': self.group0})
-        self.group1 = model.db.groups.insert({'name': 'GROUP1', '_parentid': self.user0, 'private': False})
-        self.checklist1 = model.db.checklists.insert({'name': 'CHECKLIST0', '_parentid': self.group1})
+        self.group0 = model.db.groups.insert({'name': 'GROUP0', 'parentid': self.user0, 'private': True})
+        self.checklist0 = model.db.checklists.insert({'name': 'CHECKLIST0', 'parentid': self.group0})
+        self.group1 = model.db.groups.insert({'name': 'GROUP1', 'parentid': self.user0, 'private': False})
+        self.checklist1 = model.db.checklists.insert({'name': 'CHECKLIST0', 'parentid': self.group1})
 
         # create user 1
         self.user1 = model.db.users.insert({'name': 'NAME1'})
-        self.group11 = model.db.groups.insert({'name': 'GROUP1', '_parentid': self.user1})
+        self.group11 = model.db.groups.insert({'name': 'GROUP1', 'parentid': self.user1})
 
     def tearDown(self):
         model.db.command('dropDatabase')
@@ -32,7 +32,7 @@ class TestModel(unittest.TestCase):
         self.assertEqual(cursor_size(model.available_users()), 2)
 
     def test_search_user(self):
-        "Test if a user can be found using its _parentid"
+        "Test if a user can be found using its parentid"
         user = model.User(self.user0)
         self.assertEqual(type(user), model.User)
         self.assertEqual(user.info['name'], 'NAME0')
@@ -96,7 +96,7 @@ class TestModel(unittest.TestCase):
         " Test groups can be created."
         # User 2 has no groups. A new group will be created as 0.
         user = model.User(self.user1)
-        group = user.create_child({'name': 'NEW_GROUP', '_parentid': 'XXX'})
+        group = user.create_child({'name': 'NEW_GROUP', 'parentid': 'XXX'})
 
         group_new = model.search_element(model.Group, group.id())
         self.assertEqual(type(group_new), model.Group)
@@ -107,7 +107,7 @@ class TestModel(unittest.TestCase):
         self.assertTrue('private' in group_new.info)
         self.assertTrue(group_new.info['private'])
 
-        # finaly, assert the new group has the right _parentid and not XXX
+        # finaly, assert the new group has the right parentid and not XXX
         self.assertEqual(group_new.parent().id(), self.user1)
 
     def test_group_edit(self):
@@ -130,13 +130,13 @@ class TestModel(unittest.TestCase):
         """ Test checklists can be created.  """
         group = model.search_element(model.Group, self.group0)
         self.assertFalse(group is None)
-        checklist = group.create_child({'name': 'CK', '_parentid': 'XXX'})
+        checklist = group.create_child({'name': 'CK', 'parentid': 'XXX'})
         self.assertEqual(type(checklist), model.Checklist)
         self.assertTrue('name' in checklist.info)
         self.assertTrue(checklist.info.get('name', None) == 'CK')
 
-        # finaly, assert the new checklist has the right _parentid and not XXX
-        self.assertEqual(checklist.info.get('_parentid', ''), self.group0)
+        # finaly, assert the new checklist has the right parentid and not XXX
+        self.assertEqual(checklist.info.get('parentid', ''), self.group0)
 
     def test_checklists_permissions(self):
         """ Test permissions """

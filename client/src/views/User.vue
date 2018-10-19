@@ -299,7 +299,7 @@ export default {
       mytasks.post(`/checklists/`, {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
-        _parentid: groupId,
+        parentid: groupId,
         hide_done_date: false,
         hide_done_items: false,
         items: []

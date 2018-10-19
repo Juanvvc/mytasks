@@ -84,11 +84,11 @@ class TestItemsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 400)
 
             # create an item
-            new_info = dict(name='NEWNAME', _parentid=str(self.checklist1.id()))
+            new_info = dict(name='NEWNAME', parentid=str(self.checklist1.id()))
             data = http.post(url, data=new_info)
             self.assertFalse('error_message' in data)
             self.assertEqual(data.get('name', None), 'NEWNAME')
-            self.assertEqual(data.get('_parentid', None), str(self.checklist1.id()))
+            self.assertEqual(data.get('parentid', None), str(self.checklist1.id()))
 
     def test_updateitem(self):
         """ Test to update an item, and its errors """
@@ -110,7 +110,7 @@ class TestItemsView(flask_testing.TestCase):
             data = http.get(url)
             self.assertEqual(data.get('name', None), 'NEWNAME')
             # get the information of the checklist, test the name is new one
-            data = http.get(flask.url_for('checklists.info', _id=data['_parentid']))
+            data = http.get(flask.url_for('checklists.info', _id=data['parentid']))
             self.assertEqual(data['items'][0].get('name', None), 'NEWNAME')
 
             # USER2 can get but not update an item in a public group owned by USER1

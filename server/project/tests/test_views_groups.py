@@ -138,7 +138,7 @@ class TestGroupsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 404)
 
             # non empty group: check it exists, try to delete, check it still exists
-            ck = project.model.db.checklists.find_one({'_parentid': self.group2.id()})
+            ck = project.model.db.checklists.find_one({'parentid': self.group2.id()})
             self.assertFalse(ck is None)
             url = flask.url_for('groups.info', _id=str(self.group2.id()))
             data = http.get(url)

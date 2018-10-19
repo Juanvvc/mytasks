@@ -63,13 +63,13 @@ class TestChecklistsView(flask_testing.TestCase):
             self.assertEqual(data.get('status', 0), 400)
 
             # create a checklist
-            new_info = dict(name='NEWNAME', _parentid=str(self.group2.id()))
+            new_info = dict(name='NEWNAME', parentid=str(self.group2.id()))
             data = http.post(url, data=new_info)
             self.assertFalse('error_message' in data)
             self.assertTrue('name' in data)
             self.assertEqual(data['name'], 'NEWNAME')
-            self.assertTrue('_parentid' in data)
-            self.assertEqual(data['_parentid'], str(self.group2.id()))
+            self.assertTrue('parentid' in data)
+            self.assertEqual(data['parentid'], str(self.group2.id()))
 
     def test_updatechecklist(self):
         """ Test to update an item inside a checklist by updating the checklist: it should't be possible """
