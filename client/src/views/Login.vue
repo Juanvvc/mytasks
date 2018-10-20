@@ -78,25 +78,26 @@ export default {
   }),
 
   methods: {
-    login() {
-      mytasks.login({username: this.username, password: this.password}).then( response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
+    async login() {
+      let response = await mytasks.login({username: this.username, password: this.password})
+      if(!response) {
+        this.$emit('showError', 'Cannot connect to the server')
+        return
+      }
+      if(response.data.error_message !== undefined) {
+        this.$emit('showError', response.data.error_message)
+      } else {
+        if(this.rememberMe) {
+          // if user wants to be remembered, save token in local storage
+          localStorage.setItem('token', response.data.token)
+          localStorage.setItem('useruri', response.data.uri)
         } else {
-          if(this.rememberMe) {
-            // if user wants to be remembered, save token in local storage
-            localStorage.setItem('token', response.data.token)
-            localStorage.setItem('useruri', response.data.uri)
-          } else {
-            // if user doesn't want to be remembered, save token in RAM
-            sessionStorage.setItem('token', response.data.token)
-            sessionStorage.setItem('useruri', response.data.uri)
-          }
-          this.$router.push({ name: 'user' })
+          // if user doesn't want to be remembered, save token in RAM
+          sessionStorage.setItem('token', response.data.token)
+          sessionStorage.setItem('useruri', response.data.uri)
         }
-      }).catch( () => {
-        this.$emit('showError', 'Cannot login to MyTasks')
-      })
+        this.$router.push({ name: 'user' })
+      }
     }
   }
 }

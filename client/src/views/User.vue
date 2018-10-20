@@ -9,7 +9,7 @@
     >
       <v-list dense>
         <!-- Today (specialGroups[0]) -->
-        <v-list-tile v-if="specialGroups" @click="loadGroup(specialGroups[0])">
+        <v-list-tile v-if="specialGroups && specialGroups[0]" @click="loadGroup(specialGroups[0])">
           <v-list-tile-action>
             <v-icon>today</v-icon>
           </v-list-tile-action>
@@ -18,7 +18,7 @@
           </v-list-tile-content>
         </v-list-tile>
         <!-- History (specialGroups[1]) -->
-        <v-list-tile v-if="specialGroups" @click="loadGroup(specialGroups[1])">
+        <v-list-tile v-if="specialGroups && specialGroups[1]" @click="loadGroup(specialGroups[1])">
           <v-list-tile-action>
             <v-icon>history</v-icon>
           </v-list-tile-action>
@@ -208,22 +208,21 @@ export default {
       return null
     },
 
-    loadUser(useruri) {
+    async loadUser(useruri) {
       // loads a user from its uri
-      mytasks.get(useruri).then(response => {
-        this.activeUser = response.data
-        this.specialGroups = [
-          {name: "Today", checklists: [{_id: 'today'}]},
-          {name: "History", checklists: [{_id: 'history'}]}
-        ]
-        this.groups = response.data.groups
-        this.activeGroup = this.specialGroups[0]
-      }, error => {
-        this.$emit('showError', error)
-      })
+      let response = await mytasks.get(useruri)
+      if(!response) return
+
+      this.activeUser = response.data
+      this.specialGroups = [
+        {name: "Today", checklists: [{_id: 'today'}]},
+        {name: "History", checklists: [{_id: 'history'}]}
+      ]
+      this.groups = response.data.groups
+      this.activeGroup = this.specialGroups[0]
     },
 
-    loadGroup(group) {
+    async loadGroup(group) {
       /* get data about a group from the server, and set it as active. */
 
       this.showDrawer = false
@@ -234,36 +233,33 @@ export default {
         return
       }
 
-      mytasks.get(group.uri).then( response => {
-        for(var i=0; i<this.groups.length; i++) {
-          if(this.groups[i]._id === group._id) {
-            // set data
-            this.groups[i] = response.data
-            // set activegroup
-            this.activeGroup = this.groups[i]
+      let response = await mytasks.get(group.uri)
+      if(!response) return
+      for(var i=0; i<this.groups.length; i++) {
+        if(this.groups[i]._id === group._id) {
+          // set data
+          this.groups[i] = response.data
+          // set activegroup
+          this.activeGroup = this.groups[i]
 
-            break
-          }
+          break
         }
-      }).catch( error => {
-        this.$emit('showError', error)
-      })
+      }
     },
 
-    newGroup(name) {
+    async newGroup(name) {
       // Creates a new group in this user with a provided name
-      mytasks.post('/groups/', {
+      let response = await mytasks.post('/groups/', {
         name: name,
         description: '',
         checklists: []
-      }).then(response => {
-        this.groups.push(response.data)
-      }, error => {
-        this.$emit('showError', error)
       })
+      if(response) {
+        this.groups.push(response.data)
+      }
     },
 
-    deleteGroup(groupId) {
+    async deleteGroup(groupId) {
       // delete a group given its identifier
       if(this.activeGroup !== null && this.activeGroup._id === groupId) {
         this.activeGroup = null
@@ -273,21 +269,15 @@ export default {
         this.$emit('showError', `Group not found: ${groupId}`)
         return
       }
-      this.$refs.confirmDialog.confirm({title: `Delete group "${group.name}"?`, message: 'This action cannot be undone', yes: 'Delete', no: 'Cancel'}).then( confirm => {
-        if(!confirm) {
-          return
+      if(await this.$refs.confirmDialog.confirm({title: `Delete group "${group.name}"?`, message: 'This action cannot be undone', yes: 'Delete', no: 'Cancel'})) {
+        let response = await mytasks.delete(group.uri)
+        if(response){
+          this.loadUser(`/users/${this.activeUser._id}`)
         }
-        mytasks.delete(group.uri).then(response => {
-          if(response.data.error_message !== undefined) {
-            this.$emit('showError', response.data.error_message)
-          } else {
-            this.loadUser(`/users/${this.activeUser._id}`)
-          }
-        })
-      })
+      }
     },
 
-    newChecklist(groupId, name) {
+    async newChecklist(groupId, name) {
       /* Create a new checklist in the groupId.
 
       If everyting was OK, set the group and the checklist as active */
@@ -296,26 +286,21 @@ export default {
         this.$emit('showError', 'Cannot find group ' + groupId)
         return
       }
-      mytasks.post(`/checklists/`, {
+      let response = await mytasks.post(`/checklists/`, {
         name: (name === undefined ? 'EMPTY NAME' : name),
         description: '',
         parentid: groupId,
         hide_done_date: false,
         hide_done_items: false,
         items: []
-      }).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          if(group.checklists === undefined) {
-            group.checklists = []
-          }
-          group.checklists.push(response.data)
-          this.activeGroup = group
-        }
-      }).catch( error => {
-        this.$emit('showError', error)
       })
+      if(response) {
+        if(group.checklists === undefined) {
+          group.checklists = []
+        }
+        group.checklists.push(response.data)
+        this.activeGroup = group
+      }
     },
 
     checklistDuplicated(newChecklist) {

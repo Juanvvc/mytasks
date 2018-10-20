@@ -210,70 +210,55 @@ export default {
   },
 
   methods: {
-    loadChecklist () {
+    async loadChecklist () {
       if(!this.checklistId) {
         this.checklist = null
         return
       }
       /* Loads the information of a checklist in checklistId */
-      mytasks.get(`/checklists/${this.checklistId}`).then(response => {
-        if(response.data.error_message !== undefined) {
-          this.$emit('showError', response.data.error_message)
-        } else {
-          this.showCalendar = false
-          this.checklist = response.data
-        }
-      })
+      let response = await mytasks.get(`/checklists/${this.checklistId}`)
+      if(response) {
+        this.showCalendar = false
+        this.checklist = response.data
+      }
     },
 
-    duplicateChecklist() {
+    async duplicateChecklist() {
       if(!this.isEditable()) return
       /* Duplicates current checklist. */
       if(this.checklist === null) {
         this.$emit('showError', 'No active checklist')
         return
       }
-      mytasks.post(`/checklists/${this.checklist._id}/duplicate`).then( response => {
-        this.$emit('checklistDuplicated', response.data)
-      }).catch( error => {
-        this.$emit('showError', error)
-      })
+      let response = await mytasks.post(`/checklists/${this.checklist._id}/duplicate`)
+      this.$emit('checklistDuplicated', response.data)
     },
 
-    deleteChecklist() {
+    async deleteChecklist() {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
       }
 
-      this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'}).then( confirm => {
-        if(!confirm) {
-          return
-        }
-        mytasks.delete(this.checklist.uri).then(() => {
-          this.$emit('checklistDeleted')
-        }).catch( error => {
-          this.$emit('showError', error)
-        })
-      })
+      if(await this.$refs.confirmDialog.confirm({title: `Delete checklist "${this.checklist.name}"?`, yes: 'Delete', message: 'This action cannot be undone'})) {
+        await mytasks.delete(this.checklist.uri)
+        this.$emit('checklistDeleted')
+      }
     },
 
-    updateChecklist(newData) {
+    async updateChecklist(newData) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
       }
 
       // updates the information of the checklist with new data
-      return mytasks.post(`/checklists/${this.checklistId}`, newData).then(response => {
-        this.checklist = response.data
-        return response
-      }).catch( error => {
-        this.$emit('showError', error)
-      })
+      let response = await mytasks.post(`/checklists/${this.checklistId}`, newData)
+      this.checklist = response.data
+      return response
     },
 
-    newItem(name) {
+    async newItem(name) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
@@ -283,28 +268,26 @@ export default {
         name: name,
         parentid: this.checklistId
       }
-      mytasks.post('/items/', newItemInfo).then( response => {
-        if(this.checklist.items === null || this.checklist.items === undefined) {
-          this.checklist.items = [response.data]
-        } else {
-          this.checklist.items.push(response.data)
-        }
-      })
+      let response = await mytasks.post('/items/', newItemInfo)
+      if(this.checklist.items === null || this.checklist.items === undefined) {
+        this.checklist.items = [response.data]
+      } else {
+        this.checklist.items.push(response.data)
+      }
       this.newItemName = ''
     },
 
-    updateItem(item, newItemData) {
+    async updateItem(item, newItemData) {
       if(!this.isItemEditable(item)) {
         this.$emit('showWarning', 'This item cannot be edited')
         return
       }
-      return mytasks.post(item.uri, newItemData).then(response => {
-        this.$set(item, 'checked', response.data.checked)
-        this.$set(item, 'name', response.data.name)
-        this.$set(item, 'comment', response.data.comment)
-        this.$set(item, 'done_date', response.data.done_date)
-        this.$set(item, 'due_date', response.data.due_date)
-      })
+      let response = await mytasks.post(item.uri, newItemData)
+      this.$set(item, 'checked', response.data.checked)
+      this.$set(item, 'name', response.data.name)
+      this.$set(item, 'comment', response.data.comment)
+      this.$set(item, 'done_date', response.data.done_date)
+      this.$set(item, 'due_date', response.data.due_date)
     },
 
     checkItem(item) {
@@ -320,7 +303,7 @@ export default {
       this.updateItem(item, newItemData)
     },
 
-    deleteItem(item) {
+    async deleteItem(item) {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
@@ -334,69 +317,65 @@ export default {
         this.$emit('showError', 'The item is incomplete. Duplicate the checklist and try again!')
         return
       }
-      mytasks.delete(item.uri).then(response => {
-        if(response.data.status === 200) {
-          let oldItemPos = -1
-          for(let i=0; i<=this.checklist.items.length; i++) {
-            if(this.checklist.items[i]._id === item._id) {
-              oldItemPos = i
-              break
-            }
-          }
-          if(oldItemPos !== -1) {
-            this.$delete(this.checklist.items, oldItemPos)
+      let response = await mytasks.delete(item.uri)
+      if(response.data.status === 200) {
+        let oldItemPos = -1
+        for(let i=0; i<=this.checklist.items.length; i++) {
+          if(this.checklist.items[i]._id === item._id) {
+            oldItemPos = i
+            break
           }
         }
-      })
+        if(oldItemPos !== -1) {
+          this.$delete(this.checklist.items, oldItemPos)
+        }
+      }
     },
 
-    editChecklist() {
+    async editChecklist() {
       if(!this.isEditable()) {
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
       }
-      this.$refs.checklistDialog.show(this.checklist).then(result => {
-        if(result !== null) {
-          if(result.name === null || result.name === '') {
-            // if the name is empty, delete the checklist
-            this.deleteChecklist()
-          } else {
-            var oldgroup = this.checklist.parentid
-            // save the checklist
-            this.updateChecklist(result).then( response => {
-              if(response && oldgroup !== result.parentid) {
-                // if the group changed, trigger an event
-                this.$emit('checklistMoved', this.checklist, result.parentid)
-              }
-            })
-          }
+      let result = await this.$refs.checklistDialog.show(this.checklist)
+      if(!result) return
+
+      if(result.name === null || result.name === '') {
+          // if the name is empty, delete the checklist
+          this.deleteChecklist()
+      } else {
+        let oldgroup = this.checklist.parentid
+        // save the checklist
+        let result2 = await this.updateChecklist(result)
+        if(result2 && oldgroup !== result.parentid) {
+          // if the group changed, trigger an event
+          this.$emit('checklistMoved', this.checklist, result.parentid)
         }
-      })
+      }
     },
 
-    editItem (item) {
+    async editItem (item) {
       if(!this.isItemEditable(item)) {
         this.$emit('showWarning', 'This item cannot be edited')
         return
       }
-      this.$refs.itemDialog.show({
+      let result = await this.$refs.itemDialog.show({
         name: item.name,
         comment: item.comment,
         due_date: item.due_date,
-      }).then(result => {
-        if(result !== null) {
-          if(result.name === null || result.name === '') {
-            // if the name is empty, delete the item
-            this.deleteItem(item)
-          } else {
-            // otherwise, save the item
-            this.updateItem(item, result)
-          }
-        }
       })
+      if(result !== null) {
+        if(result.name === null || result.name === '') {
+          // if the name is empty, delete the item
+          this.deleteItem(item)
+        } else {
+          // otherwise, save the item
+          this.updateItem(item, result)
+        }
+      }
     },
 
-    clearChecklist() {
+    async clearChecklist() {
       if(!this.isEditable()){
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
@@ -406,14 +385,14 @@ export default {
         this.$emit('showError', 'No active checklist to clear')
         return
       }
-      this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'}).then( confirm => {
-        if(!confirm) {
-          return
-        }
-        mytasks.post(`/checklists/${this.checklist._id}/clear`).then( response => {
-          this.checklist = response.data
-        })
-      })
+      let confirm = await this.$refs.confirmDialog.confirm({title: `Remove done items from "${this.checklist.name}"?`, message: "This action cannot be undone", yes: 'Remove'})
+      if(!confirm) {
+        return
+      }
+      let response = mytasks.post(`/checklists/${this.checklist._id}/clear`)
+      if(response) {
+        this.checklist = response.data
+      }
     },
 
     finishItemDrag() {
@@ -436,55 +415,54 @@ export default {
       }
     },
 
-    promoteSection(item) {
+    async promoteSection(item) {
       // promotes a section to a checklist
       if(!this.isEditable()) {
         this.$emit('showWarning', 'This checklist cannot be edited')
         return
       }
 
-      this.$refs.confirmDialog.confirm({title: `Promote section "${item.name}"?`, yes: 'Promote', message: 'This action cannot be undone'}).then( confirm => {
-        if(!confirm) {
-          return
-        }
-        // get where the section starts and its length
-        let indexOfItem = -1
-        let numberOfItems = 1
-        for(let i=0; i<this.checklist.items.length; i++){
-          if(indexOfItem == -1) {
-            if(this.checklist.items[i]._id === item._id) {
-              indexOfItem = i
-            }
-          } else {
-            if(this.isSection(this.checklist.items[i])) {
-              break
-            }
-            numberOfItems++
+      let confirm = await this.$refs.confirmDialog.confirm({title: `Promote section "${item.name}"?`, yes: 'Promote', message: 'This action cannot be undone'})
+      if(!confirm) {
+        return
+      }
+      // get where the section starts and its length
+      let indexOfItem = -1
+      let numberOfItems = 1
+      for(let i=0; i<this.checklist.items.length; i++){
+        if(indexOfItem == -1) {
+          if(this.checklist.items[i]._id === item._id) {
+            indexOfItem = i
           }
+        } else {
+          if(this.isSection(this.checklist.items[i])) {
+            break
+          }
+          numberOfItems++
         }
-        if(indexOfItem === -1) {
-          this.$emit('showError', 'Section not found')
-          return
-        }
+      }
+      if(indexOfItem === -1) {
+        this.$emit('showError', 'Section not found')
+        return
+      }
 
-        // create the new checklist with the old items
-        var new_items = []
-        for(let i=indexOfItem + 1; i<indexOfItem + numberOfItems; i++) {
-          new_items.push({_id: this.checklist.items[i]._id})
-        }
-        mytasks.post('/checklists/', {
-          name: this.checklist.name + ' ' + this.checklist.items[indexOfItem].name,
-          items: new_items,
-          parentid: this.checklist.parentid
-        }).then( response => {
-          if(!response) return
-          // delete the items from the current checklist
-          this.checklist.items.splice(indexOfItem, numberOfItems)
-          mytasks.post(this.checklist.uri, {items: this.checklist.items})  // notice we ignore errors here
-          // ask to load the new checklist
-          this.$emit('checklistDuplicated', response.data)
-        })
+      // create the new checklist with the old items
+      var new_items = []
+      for(let i=indexOfItem + 1; i<indexOfItem + numberOfItems; i++) {
+        new_items.push({_id: this.checklist.items[i]._id})
+      }
+      let response = await mytasks.post('/checklists/', {
+        name: this.checklist.name + ' ' + this.checklist.items[indexOfItem].name,
+        items: new_items,
+        parentid: this.checklist.parentid
       })
+      if(!response) return
+
+      // delete the items from the current checklist
+      this.checklist.items.splice(indexOfItem, numberOfItems)
+      mytasks.post(this.checklist.uri, {items: this.checklist.items})  // notice we ignore errors here
+      // ask to load the new checklist
+      this.$emit('checklistDuplicated', response.data)
     },
 
     isEditable() {
