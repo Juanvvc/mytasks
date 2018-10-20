@@ -41,7 +41,7 @@ export default {
 
     click(result) {
       this.visible = false
-      this.resolve(result)
+      if(this.resolve) this.resolve(result)
     }
   }
 }

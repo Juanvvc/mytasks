@@ -96,8 +96,9 @@ export default {
 
     click(result) {
       this.visible = false
+      if(!this.resolve) return
 
-      if(result && this.resolve !== undefined) {
+      if(result) {
         this.resolve({
           name: (this.name!==null?this.name.trim():''),
           comment: (this.comment!==null?this.comment.trim():''),
@@ -108,6 +109,8 @@ export default {
         this.comment = ''
         this.due_date = ''
         this.rrule = ''
+      } else {
+        this.resolve(null)
       }
     }
   }
