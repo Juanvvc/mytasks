@@ -59,6 +59,8 @@ def test():
 @app.cli.command()
 def test_model():
     """Runs the unit tests, only for models"""
+    import unittest
+
     app.config.from_object('project.server.config.TestingConfig')
     project.model.configure_model(app)
 
@@ -72,6 +74,8 @@ def test_model():
 @app.cli.command()
 def test_views():
     """Runs the unit tests , only for views """
+    import unittest
+
     app.config.from_object('project.server.config.TestingConfig')
     project.model.configure_model(app)
 
@@ -86,6 +90,7 @@ def test_views():
 def cov():
     """Runs the unit tests with coverage."""
     import coverage
+    import unittest
     COV = coverage.coverage(
         branch=True,
         include='project/*',

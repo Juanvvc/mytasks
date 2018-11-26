@@ -6,4 +6,4 @@ __pycache__
 server/tmp
 server/dump
 client/publish.sh
-test
+dbtest

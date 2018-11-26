@@ -28,16 +28,16 @@ class TestUsersView(flask_testing.TestCase):
     def tearDown(self):
         project.model.db.command('dropDatabase')
 
-    def test_availableusers(self):
-        with self.client:
-            url = flask.url_for('users.available')
-            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
-
-            data = http.get(url)
-            self.assertFalse('error_message' in data)
-            self.assertTrue(type(data) == list)
-            self.assertTrue(len(data) == 1)
-            self.assertTrue('name' in data[0] and data[0]['name'] == 'USER1')
+#    def test_availableusers(self):
+#        with self.client:
+#            url = flask.url_for('users.available')
+#            http = HTTPHelper(self.client, ['USER1', 'PASSWORD1'])
+#
+#            data = http.get(url)
+#            self.assertFalse('error_message' in data)
+#            self.assertTrue(type(data) == list)
+#            self.assertTrue(len(data) == 1)
+#            self.assertTrue('name' in data[0] and data[0]['name'] == 'USER1')
 
     def test_oneuser(self):
         with self.client:

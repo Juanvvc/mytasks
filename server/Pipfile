@@ -11,6 +11,7 @@ bcrypt = "*"
 Flask-Auth = "*"
 pymongo = "*"
 pyjwt = "*"
+flask-testing = "*"
 
 [dev-packages]
 coverage = "*"
