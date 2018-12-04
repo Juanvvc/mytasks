@@ -17,7 +17,7 @@
               hint="Comment"
               placeholder="Comment"
               v-model="comment"
-              prepend-icon="comment" />
+              prepend-icon="mdi-comment-text" />
              <v-flex xs12 lg6>
               <v-menu
                 ref="menuDate"

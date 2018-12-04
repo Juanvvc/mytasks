@@ -20,7 +20,7 @@
                 placeholder="Username"
                 label="Username"
                 v-model="username"
-                prepend-icon="face"
+                prepend-icon="mdi-face"
                 :rules="[rules.required]" />
               <v-text-field
                 placeholder="password"
@@ -30,7 +30,7 @@
                 :append-icon="showPassword ? 'visibility_off' : 'visibility'"
                 :rules="[rules.required]"
                 counter
-                prepend-icon="fingerprint"
+                prepend-icon="mdi-textbox-password"
                 @keyup.enter="login"
                 @click:append="showPassword = !showPassword" />
               <v-switch

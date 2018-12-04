@@ -32,7 +32,7 @@
         <!-- group name -->
         <v-list-tile v-for="group in groups" @click="loadGroup(group)" :key="group._id">
           <v-list-tile-action>
-            <v-icon>group_work</v-icon>
+            <v-icon>mdi-tag-outline</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
             <v-list-tile-title>{{group.name}}</v-list-tile-title>
@@ -86,8 +86,15 @@
         <v-spacer></v-spacer>
 
         <v-tooltip bottom>
+          <v-btn icon slot="activator">
+            <v-icon>mdi-notebook</v-icon>
+          </v-btn>
+          <span>Show/hide notebook</span>
+        </v-tooltip>
+
+        <v-tooltip bottom>
           <v-btn icon slot="activator" @click="logout">
-            <v-icon>exit_to_app</v-icon>
+            <v-icon>mdi-logout</v-icon>
           </v-btn>
           <span>Logout</span>
         </v-tooltip>

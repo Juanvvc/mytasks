@@ -17,7 +17,7 @@
           hint="Used to order checklists in a group. A higher number means a higher priority"
           v-model="order"
           clearable
-          prepend-icon="reorder" />
+          prepend-icon="mdi-priority-high" />
         <v-select
           placeholder="Group"
           label="Group"
@@ -25,12 +25,12 @@
           :items="availableGroups"
           item-text="name"
           item-value="_id"
-          prepend-icon="group_work" />
+          prepend-icon="mdi-tag" />
         <v-textarea
           label="Description"
           placeholder="Description"
           v-model="description"
-          prepend-icon="comment" />
+          prepend-icon="mdi-comment-text" />
       </v-layout>
 
       <v-card-actions>

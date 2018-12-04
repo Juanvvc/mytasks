@@ -16,6 +16,9 @@
 </template>
 
 <script>
+
+import '@mdi/font/css/materialdesignicons.min.css'
+
 export default {
   data: () => ({
     alertMessage: null,
