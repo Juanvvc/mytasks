@@ -20,6 +20,8 @@ cd server
 
 ### Configuration
 
+You'll need a mongodb database in the system.
+
 Create a file named `server/config.py`. This file is local, it might include
 usernames, secrets and passwords and SHOULDN'T be added to git. Example:
 
