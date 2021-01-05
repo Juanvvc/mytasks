@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@mdi/font": "^3.2.89",
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "vue": "^2.5.17",
     "vue-router": "^3.0.1",
     "vue-simple-calendar": "^4.1.0",
